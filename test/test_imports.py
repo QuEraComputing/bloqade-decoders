@@ -32,6 +32,10 @@ def test_annotate_exports():
     # Dialect
     assert hasattr(annotate, "dialect")
 
+    # Interface functions
+    assert hasattr(annotate, "set_detector")
+    assert hasattr(annotate, "set_observable")
+
 
 def test_measurement_result_value_enum():
     """Test MeasurementResultValue enum values."""
@@ -47,3 +51,11 @@ def test_dialect_name():
     from bloqade.decoders.dialects.annotate import dialect
 
     assert dialect.name == "decoders.annotate"
+
+
+def test_interface_functions():
+    """Test that interface functions are callable."""
+    from bloqade.decoders.dialects import annotate
+
+    assert callable(annotate.set_detector)
+    assert callable(annotate.set_observable)
