@@ -1,6 +1,6 @@
 # bloqade-decoders
 
-Decoder dialect for Bloqade quantum error correction.
+Annotation dialect and interfaces for decoding QEC-supported programs in Bloqade.
 
 ## Installation
 
