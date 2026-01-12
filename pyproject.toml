@@ -1,0 +1,82 @@
+[project]
+name = "bloqade-decoders"
+version = "0.1.0"
+description = "Decoder related statements and interfaces for Bloqade."
+readme = "README.md"
+authors = [
+    { name = "johnzl-777", email="jlong@quera.com"},
+]
+requires-python = ">=3.10"
+dependencies = [
+    "kirin-toolchain~=0.22.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bloqade"]
+
+[dependency-groups]
+dev = [
+    "black>=24.10.0",
+    "coverage>=7.6.4",
+    "ipython>=8.29.0",
+    "isort>=5.13.2",
+    "mypy>=1.13.0",
+    "pre-commit>=4.0.1",
+    "pyright>=1.1.388",
+    "pytest>=8.3.3",
+    "ruff>=0.7.3",
+]
+
+[tool.isort]
+profile = "black"
+combine_as_imports = true
+multi_line_output = 3
+length_sort = true
+src_paths = ["src/bloqade"]
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+target-version = "py310"
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.lint]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.coverage.run]
+include = ["src/bloqade/*"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pytest.ini_options]
+testpaths = "test/"
