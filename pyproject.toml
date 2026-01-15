@@ -19,7 +19,11 @@ tesseract = [
     "tesseract-decoder>=0.1.1.dev20260109233451",
 ]
 ldpc = [
+    "beliefmatching>=0.2.0",
     "ldpc>=2.4.1",
+]
+mwpf = [
+    "mwpf>=0.2.12",
 ]
 
 [build-system]
