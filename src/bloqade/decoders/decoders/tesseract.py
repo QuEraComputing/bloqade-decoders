@@ -8,23 +8,9 @@ import tesseract_decoder.tesseract as tesseract
 
 
 class TesseractDecoder(BaseDecoder):
-    """Interface for the Tesseract decoder that inherits from BaseDecoder.
+    """Tesseract decoder wrapper.
 
-    This class wraps the tesseract_decoder library and provides a consistent
-    interface for decoding quantum error correction syndromes.
-
-    Args:
-        dem: The detector error model describing the error structure.
-        det_beam: Beam search cutoff - threshold for residual detection events
-            before pruning. Lower values make search more aggressive.
-        beam_climbing: If True, enables beam climbing heuristic to try different
-            det_beam values.
-        no_revisit_dets: If True, prevents revisiting nodes with the same set
-            of leftover detection events.
-        verbose: If True, enables verbose logging for debugging.
-        pqlimit: Limit on the number of nodes in the priority queue.
-        det_orders: List of detector orderings for ensemble reordering optimization.
-        det_penalty: Cost added for each residual detection event.
+    Arguments match tesseract_decoder.TesseractConfig; defaults are used if not specified.
     """
 
     def __init__(

@@ -11,21 +11,7 @@ from .base import BaseDecoder
 class BpLsdDecoder(BaseDecoder):
     """Belief propagation + localized statistics decoder.
 
-    BP+LSD performs matrix inversion on local error clusters rather than
-    over the entire parity check matrix, making it faster for large codes.
-
-    Args:
-        dem: The detector error model describing the error structure.
-        max_iter: Maximum number of BP iterations.
-        bp_method: BP method to use ('product_sum' or 'minimum_sum').
-        ms_scaling_factor: Scaling factor used in the minimum sum method.
-        schedule: Update schedule ('serial' or 'parallel').
-        omp_thread_count: Number of OpenMP threads for parallel decoding.
-        random_schedule_seed: Seed for random serial schedule order.
-        serial_schedule_order: List specifying the serial schedule order.
-        bits_per_step: Number of bits added to cluster in each LSD step.
-        lsd_order: Order of the LSD post-processing.
-        lsd_method: LSD method ('lsd_0', 'lsd_e', 'lsd_cs').
+    Arguments match ldpc.BpLsdDecoder; defaults are used if not specified.
     """
 
     def __init__(

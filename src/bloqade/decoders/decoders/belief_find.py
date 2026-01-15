@@ -11,21 +11,7 @@ from .base import BaseDecoder
 class BeliefFindDecoder(BaseDecoder):
     """Belief propagation + union-find decoder.
 
-    Belief-find first attempts to solve the decoding using belief propagation.
-    If this fails, a union-find decoder is run as a post-processor using the
-    output of BP to guide cluster growth.
-
-    Args:
-        dem: The detector error model describing the error structure.
-        max_iter: Maximum number of BP iterations.
-        bp_method: BP method to use ('product_sum' or 'minimum_sum').
-        ms_scaling_factor: Scaling factor used in the minimum sum method.
-        schedule: Update schedule ('serial' or 'parallel').
-        omp_thread_count: Number of OpenMP threads for parallel decoding.
-        random_schedule_seed: Seed for random serial schedule order.
-        serial_schedule_order: List specifying the serial schedule order.
-        uf_method: Union-find method ('peeling' or 'inversion').
-        bits_per_step: Number of bits added to cluster in each UFD step.
+    Arguments match ldpc.BeliefFindDecoder; defaults are used if not specified.
     """
 
     def __init__(
