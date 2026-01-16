@@ -8,7 +8,6 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "jaxtyping>=0.3.5",
     "kirin-toolchain~=0.22.2",
     "numpy>=2.2.6",
     "stim>=1.15.0",
