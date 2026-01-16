@@ -20,25 +20,25 @@ class BeliefFindDecoder(BaseDecoder):
 
     Args:
         dem (stim.DetectorErrorModel): The detector error model describing the error structure.
-        max_iter (Optional[int]): Maximum number of BP iterations. Defaults to 0.
-        bp_method (Optional[str]): BP method to use. Must be one of 'product_sum' or
-            'minimum_sum'. Defaults to 'minimum_sum'.
-        ms_scaling_factor (Optional[float]): Scaling factor used in the minimum sum method.
-            Defaults to 1.0.
-        schedule (Optional[str]): Update schedule. Must be one of 'parallel' or 'serial'.
-            Defaults to 'parallel'.
-        omp_thread_count (Optional[int]): Number of OpenMP threads for parallel decoding.
-            Defaults to 1.
-        random_schedule_seed (Optional[int]): Seed for random serial schedule order.
-            Defaults to 0.
+        max_iter (Optional[int]): Maximum number of BP iterations, by default 0.
+        bp_method (Optional[str]): BP method to use. Must be one of
+            {'product_sum', 'minimum_sum'}, by default 'minimum_sum'.
+        ms_scaling_factor (Optional[float]): Scaling factor used in the minimum sum method,
+            by default 1.0.
+        schedule (Optional[str]): Update schedule. Must be one of {'parallel', 'serial'},
+            by default 'parallel'.
+        omp_thread_count (Optional[int]): Number of OpenMP threads for parallel decoding,
+            by default 1.
+        random_schedule_seed (Optional[int]): Seed for random serial schedule order,
+            by default 0.
         serial_schedule_order (Optional[list[int]]): List specifying the serial schedule
             order. Must be of length equal to the block length of the code, by default None.
         uf_method (Optional[str]): Method to solve the local decoding problem in each
-            cluster. Choose from 'inversion' or 'peeling'. The 'peeling' method is only
+            cluster. Must be one of {'inversion', 'peeling'}. The 'peeling' method is only
             suitable for LDPC codes with point-like syndromes; 'inversion' can be applied
-            to any parity check matrix. Defaults to 'inversion'.
+            to any parity check matrix, by default 'inversion'.
         bits_per_step (Optional[int]): Number of bits added to cluster in each step of the UFD algorithm.
-            If not provided, defaults to the block length of the code.
+            If not provided, this is set to the block length of the code.
     """
 
     def __init__(
