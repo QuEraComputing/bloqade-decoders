@@ -14,7 +14,9 @@ class BaseDecoder(ABC):
         pass
 
     def decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
-        """Decode a batch or single shot of detector bits."""
+        """Decode a batch or single shot of detector bits.
+        
+            Note that this method accepts either an array of booleans (representing a single shot) or an array of arrays of booleans (representing a batch of shots)."""
         if detector_bits.ndim == 1:
             return self._decode(detector_bits)
         else:
