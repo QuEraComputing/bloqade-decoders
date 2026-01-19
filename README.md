@@ -1,6 +1,6 @@
 # bloqade-decoders
 
-Annotation dialect and interfaces for decoding QEC-supported programs in Bloqade.
+The QEC user interface providing integration with popular open-source decoders for the [Bloqade SDK](https://github.com/QuEraComputing/bloqade)
 
 ## Installation
 
