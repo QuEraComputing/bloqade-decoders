@@ -1,5 +1,6 @@
 import stim
 import numpy as np
+import numpy.typing as npt
 from typing import Optional
 
 from mwpf import SinterMWPFDecoder
@@ -41,7 +42,7 @@ class MWPFDecoder(BaseDecoder):
         self._sinter_decoder = SinterMWPFDecoder(**decoder_kwargs)
         self._compiled_decoder = self._sinter_decoder.compile_decoder_for_dem(dem=dem)
 
-    def _decode(self, detector_bits: np.ndarray) -> np.ndarray:
+    def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         bit_packed = np.packbits(
             np.array([detector_bits]), axis=-1, bitorder="little"
         )

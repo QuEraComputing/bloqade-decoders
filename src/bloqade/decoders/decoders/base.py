@@ -1,5 +1,6 @@
 import stim
 import numpy as np
+import numpy.typing as npt
 from abc import ABC, abstractmethod
 
 
@@ -8,11 +9,11 @@ class BaseDecoder(ABC):
         pass
 
     @abstractmethod
-    def _decode(self, detector_bits: np.ndarray) -> np.ndarray:
+    def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a single shot of detector bits."""
         pass
 
-    def decode(self, detector_bits: np.ndarray) -> np.ndarray:
+    def decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a batch or single shot of detector bits."""
         if detector_bits.ndim == 1:
             return self._decode(detector_bits)

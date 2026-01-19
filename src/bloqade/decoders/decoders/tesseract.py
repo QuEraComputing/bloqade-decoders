@@ -1,5 +1,6 @@
 import stim
 import numpy as np
+import numpy.typing as npt
 from typing import Optional
 
 from .base import BaseDecoder
@@ -49,7 +50,7 @@ class TesseractDecoder(BaseDecoder):
         self._config = tesseract.TesseractConfig(**config_kwargs)
         self._decoder = tesseract.TesseractDecoder(self._config)
 
-    def _decode(self, detector_bits: np.ndarray) -> np.ndarray:
+    def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a single shot of detector bits.
 
         Args:
