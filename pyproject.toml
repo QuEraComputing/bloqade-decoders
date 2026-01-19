@@ -22,7 +22,7 @@ ldpc = [
     "ldpc>=2.4.1",
 ]
 mwpf = [
-    "mwpf>=0.2.12",
+    "mwpf[stim]>=0.2.12",
 ]
 
 [build-system]

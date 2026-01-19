@@ -5,6 +5,7 @@ from bloqade.decoders.decoders import (
     BeliefFindDecoder,
     BpLsdDecoder,
     BpOsdDecoder,
+    MWPFDecoder,
 )
 from .reference import reference_dem, reference_syndromes, decoded_obs
 
@@ -29,5 +30,11 @@ def test_bp_lsd_decoder():
 
 def test_bp_osd_decoder():
     decoder = BpOsdDecoder(reference_dem)
+    result = decoder.decode(reference_syndromes)
+    np.testing.assert_array_equal(result, decoded_obs)
+
+
+def test_mwpf_decoder():
+    decoder = MWPFDecoder(reference_dem)
     result = decoder.decode(reference_syndromes)
     np.testing.assert_array_equal(result, decoded_obs)
