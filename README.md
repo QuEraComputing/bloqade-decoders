@@ -48,4 +48,27 @@ themselves in terms of arguments. The only major difference is you're expected t
 a Detector Error Model (DEM) to instantiate the interface. 
 
 Furthermore, all decoder interfaces are designed to accept the detector results of a single shot
-OR a batch of shots, with the result being the observable correction. 
+OR a batch of shots as a numpy `ndarray` of booleans, with the result being the observable correction (also as an `ndarray` of booleans). 
+
+```python
+from bloqade.decoders import BpOsdDecoder
+import numpy as np
+import stim
+
+dem = stim.DetectorErrorModel("""
+    error(0.1) D0
+    error(0.1) D0 D1
+    error(0.1) D1 L0
+""")
+# Pretend that circuit was executed twice,
+# with two sets of detector results.
+syndromes = np.array([[False, False], [False, True]])
+
+# instantiate decoder, passing in desired arguments as you would
+# the original decoder interface.
+decoder = BpOsdDecoder(dem, bp_method="product_sum")
+
+decoded_observable = decoder.decode(syndromes)
+# decoded_ovserable should give you
+# np.array([[False], [True]])
+```
