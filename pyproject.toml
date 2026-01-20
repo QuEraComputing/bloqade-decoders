@@ -5,6 +5,7 @@ description = "Decoder related statements and interfaces for Bloqade."
 readme = "README.md"
 authors = [
     { name = "johnzl-777", email="jlong@quera.com"},
+    { name = "rafaelha", email="rhaenel@quera.com"}
 ]
 requires-python = ">=3.10"
 dependencies = [
