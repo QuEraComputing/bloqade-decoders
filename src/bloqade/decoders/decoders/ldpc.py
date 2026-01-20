@@ -3,12 +3,12 @@ import numpy as np
 import numpy.typing as npt
 from typing import Optional
 
-from beliefmatching import detector_error_model_to_check_matrices  
-from ldpc.belief_find_decoder import BeliefFindDecoder as LdpcBeliefFindDecoder  
-from ldpc.bplsd_decoder import BpLsdDecoder as LdpcBpLsdDecoder
-from ldpc.bposd_decoder import BpOsdDecoder as LdpcBpOsdDecoder  
-
 from .base import BaseDecoder
+
+from beliefmatching import detector_error_model_to_check_matrices
+from ldpc.belief_find_decoder import BeliefFindDecoder as LdpcBeliefFindDecoder
+from ldpc.bplsd_decoder import BpLsdDecoder as LdpcBpLsdDecoder
+from ldpc.bposd_decoder import BpOsdDecoder as LdpcBpOsdDecoder
 
 
 class BeliefFindDecoder(BaseDecoder):

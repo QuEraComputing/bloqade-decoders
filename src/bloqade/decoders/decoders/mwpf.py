@@ -3,13 +3,19 @@ import numpy as np
 import numpy.typing as npt
 from typing import Optional
 
-from mwpf import SinterMWPFDecoder
-
 from .base import BaseDecoder
+
+try:
+    from mwpf import SinterMWPFDecoder
+except ImportError as e:
+    raise ImportError(
+        "mwpf is required for MWPFDecoder. "
+        "Install it with: pip install mwpf[stim]"
+    ) from e
 
 
 class MWPFDecoder(BaseDecoder):
-    """Minimum Weight Parity Factor decoder wrapper.
+    """Hypgergraph Minimum Weight Parity Factor decoder wrapper.
 
     Arguments match mwpf.SinterMWPFDecoder defaul; defaults are used if not specified.
 

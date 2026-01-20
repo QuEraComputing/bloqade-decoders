@@ -5,7 +5,13 @@ from typing import Optional
 
 from .base import BaseDecoder
 
-import tesseract_decoder.tesseract as tesseract
+try:
+    import tesseract_decoder.tesseract as tesseract
+except ImportError as e:
+    raise ImportError(
+        "tesseract-decoder is required for TesseractDecoder. "
+        "Install it with: pip install tesseract-decoder"
+    ) from e
 
 
 class TesseractDecoder(BaseDecoder):
