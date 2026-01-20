@@ -193,7 +193,7 @@ class BpOsdDecoder(BaseDecoder):
             {'parallel', 'serial'}, by default 'parallel'.
         omp_thread_count (Optional[int]): The number of OpenMP threads used for parallel
             decoding, by default 1.
-        random_serial_schedule (Optional[int]): Whether to use a random serial schedule order,
+        random_serial_schedule (Optional[bool]): Whether to use a random serial schedule order,
             by default False.
         serial_schedule_order (Optional[List[int]]): A list of integers that specify the
             serial schedule order. Must be of length equal to the block length of the code,
