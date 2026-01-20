@@ -16,7 +16,7 @@ except ImportError as e:
 
 
 class MWPFDecoder(BaseDecoder):
-    """Hypgergraph Minimum Weight Parity Factor decoder wrapper.
+    """Hypergraph Minimum Weight Parity Factor decoder wrapper.
 
     Arguments match mwpf.SinterMWPFDecoder default; defaults are used if not specified.
 
