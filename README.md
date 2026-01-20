@@ -2,15 +2,15 @@
 
 The QEC user interface providing integration with popular open-source decoders for the [Bloqade SDK](https://github.com/QuEraComputing/bloqade).
 
-By default, the following decoders from the [`ldpc`](https://github.com/quantumgizmos/ldpc) package and
+By default, the following decoders from the (`ldpc`)[https://github.com/quantumgizmos/ldpc]package and
 their corresponding interfaces are immediately available for decoding use upon installation of this package:
 
 - BP+OSD - through `bloqade.decoders.BpOsdDecoder`
 - BP+LSD - through `bloqade.decoders.BpLsdDecoder`
 - Belief Find - through `bloqade.decoders.BeliefFindDecoder`
 
-Interfaces also exist for the Hypergraph Minimum-Weight Parity Factor (MWPF)[https://github.com/yuewuo/mwpf] decoder as well as
-the (Tesseract decoder)[https://github.com/quantumlib/tesseract-decoder] but the decoders themselves are not included as a dependency and are instead optional.
+Interfaces also exist for the Hypergraph Minimum-Weight Parity Factor [MWPF](https://github.com/yuewuo/mwpf) decoder as well as
+the [Tesseract decoder](https://github.com/quantumlib/tesseract-decoder) but the decoders themselves are not included as a dependency and are instead optional.
 
 You can install them separately or specify you would like them included with the `bloqade-decoders` installation through the
 additional instructions below.
@@ -69,6 +69,6 @@ syndromes = np.array([[False, False], [False, True]])
 decoder = BpOsdDecoder(dem, bp_method="product_sum")
 
 decoded_observable = decoder.decode(syndromes)
-# decoded_ovserable should give you
+# decoded_observable should give you
 # np.array([[False], [True]])
 ```
