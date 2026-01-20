@@ -86,8 +86,8 @@ class BeliefFindDecoder(BaseDecoder):
         )
 
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
-        decoded_syndrome = self._decoder.decode(detector_bits)
-        return decoded_syndrome @ self._observable_matrix.T % 2
+        estimated_error = self._decoder.decode(detector_bits)
+        return estimated_error @ self._observable_matrix.T % 2
 
 
 class BpLsdDecoder(BaseDecoder):
@@ -169,8 +169,8 @@ class BpLsdDecoder(BaseDecoder):
         )
 
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
-        decoded_syndrome = self._decoder.decode(detector_bits)
-        return decoded_syndrome @ self._observable_matrix.T % 2
+        estimated_error = self._decoder.decode(detector_bits)
+        return estimated_error @ self._observable_matrix.T % 2
 
 
 class BpOsdDecoder(BaseDecoder):
@@ -246,5 +246,5 @@ class BpOsdDecoder(BaseDecoder):
         )
 
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
-        decoded_syndrome = self._decoder.decode(detector_bits)
-        return decoded_syndrome @ self._observable_matrix.T % 2
+        estimated_error = self._decoder.decode(detector_bits)
+        return estimated_error @ self._observable_matrix.T % 2
