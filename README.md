@@ -23,7 +23,7 @@ For access to the `ldpc`-package originating decoders and their respective inter
 pip install bloqade-decoders
 ```
 
-For add the tesseract decoder you can do:
+To add the tesseract decoder you can do:
 
 ```bash
 pip install bloqade-decoders[tesseract]
