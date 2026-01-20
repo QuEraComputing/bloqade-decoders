@@ -1,3 +1,7 @@
+"""
+Trivial two logical observable DEM
+"""
+
 import stim
 import numpy as np
 

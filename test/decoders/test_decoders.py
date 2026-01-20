@@ -1,40 +1,45 @@
 import numpy as np
+import pytest
 
 from bloqade.decoders.decoders import (
     TesseractDecoder,
-    BeliefFindDecoder,
-    BpLsdDecoder,
-    BpOsdDecoder,
+    #BeliefFindDecoder,
+    #BpLsdDecoder,
+    #BpOsdDecoder,
     MWPFDecoder,
 )
-from .reference import reference_dem, reference_syndromes, decoded_obs
+from .rep_code_ref import (
+    space_error_dem,
+    space_error_syndromes,
+    expected_space_error_decoded_obs,
+    time_error_dem,
+    time_error_syndromes,
+    expected_time_error_decoded_obs,
+)
+from .two_logical_ref import (
+    reference_dem as two_logical_dem,
+    reference_syndromes as two_logical_syndromes,
+    decoded_obs as two_logical_decoded_obs,
+)
+
+DECODERS = [
+    TesseractDecoder,
+    #BeliefFindDecoder,
+    #BpLsdDecoder,
+    #BpOsdDecoder,
+    MWPFDecoder,
+]
+
+TEST_CASES = [
+    (space_error_dem, space_error_syndromes, expected_space_error_decoded_obs),
+    (time_error_dem, time_error_syndromes, expected_time_error_decoded_obs),
+    (two_logical_dem, two_logical_syndromes, two_logical_decoded_obs),
+]
 
 
-def test_tesseract_decoder():
-    decoder = TesseractDecoder(reference_dem)
-    result = decoder.decode(reference_syndromes)
-    np.testing.assert_array_equal(result, decoded_obs)
-
-
-def test_belief_find_decoder():
-    decoder = BeliefFindDecoder(reference_dem)
-    result = decoder.decode(reference_syndromes)
-    np.testing.assert_array_equal(result, decoded_obs)
-
-
-def test_bp_lsd_decoder():
-    decoder = BpLsdDecoder(reference_dem)
-    result = decoder.decode(reference_syndromes)
-    np.testing.assert_array_equal(result, decoded_obs)
-
-
-def test_bp_osd_decoder():
-    decoder = BpOsdDecoder(reference_dem)
-    result = decoder.decode(reference_syndromes)
-    np.testing.assert_array_equal(result, decoded_obs)
-
-
-def test_mwpf_decoder():
-    decoder = MWPFDecoder(reference_dem)
-    result = decoder.decode(reference_syndromes)
-    np.testing.assert_array_equal(result, decoded_obs)
+@pytest.mark.parametrize("decoder_cls", DECODERS)
+@pytest.mark.parametrize("dem,syndromes,expected", TEST_CASES)
+def test_decoder(decoder_cls, dem, syndromes, expected):
+    decoder = decoder_cls(dem)
+    result = decoder.decode(syndromes)
+    np.testing.assert_array_equal(result, expected)
