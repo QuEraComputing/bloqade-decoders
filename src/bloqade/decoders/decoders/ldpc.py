@@ -1,5 +1,6 @@
 import stim
 import numpy as np
+import numpy.typing as npt
 from typing import Optional
 
 from beliefmatching import detector_error_model_to_check_matrices  
@@ -56,6 +57,7 @@ class BeliefFindDecoder(BaseDecoder):
     ):
         self._dem = dem
         dem_matrix = detector_error_model_to_check_matrices(dem)
+        self._observable_matrix = dem_matrix.observables_matrix
 
         decoder_kwargs: dict = {}
         if max_iter is not None:
@@ -83,8 +85,9 @@ class BeliefFindDecoder(BaseDecoder):
             **decoder_kwargs,
         )
 
-    def _decode(self, detector_bits: np.ndarray) -> np.ndarray:
-        return self._decoder.decode(detector_bits)
+    def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
+        decoded_syndrome = self._decoder.decode(detector_bits)
+        return decoded_syndrome @ self._observable_matrix.T % 2
 
 
 class BpLsdDecoder(BaseDecoder):
@@ -135,6 +138,7 @@ class BpLsdDecoder(BaseDecoder):
     ):
         self._dem = dem
         dem_matrix = detector_error_model_to_check_matrices(dem)
+        self._observable_matrix = dem_matrix.observables_matrix
 
         decoder_kwargs: dict = {}
         if max_iter is not None:
@@ -164,8 +168,9 @@ class BpLsdDecoder(BaseDecoder):
             **decoder_kwargs,
         )
 
-    def _decode(self, detector_bits: np.ndarray) -> np.ndarray:
-        return self._decoder.decode(detector_bits)
+    def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
+        decoded_syndrome = self._decoder.decode(detector_bits)
+        return decoded_syndrome @ self._observable_matrix.T % 2
 
 
 class BpOsdDecoder(BaseDecoder):
@@ -212,6 +217,7 @@ class BpOsdDecoder(BaseDecoder):
     ):
         self._dem = dem
         dem_matrix = detector_error_model_to_check_matrices(dem)
+        self._observable_matrix = dem_matrix.observables_matrix
 
         decoder_kwargs: dict = {}
         if bp_method is not None:
@@ -239,5 +245,6 @@ class BpOsdDecoder(BaseDecoder):
             **decoder_kwargs,
         )
 
-    def _decode(self, detector_bits: np.ndarray) -> np.ndarray:
-        return self._decoder.decode(detector_bits)
+    def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
+        decoded_syndrome = self._decoder.decode(detector_bits)
+        return decoded_syndrome @ self._observable_matrix.T % 2

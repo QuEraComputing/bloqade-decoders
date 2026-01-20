@@ -3,9 +3,9 @@ import pytest
 
 from bloqade.decoders.decoders import (
     TesseractDecoder,
-    #BeliefFindDecoder,
-    #BpLsdDecoder,
-    #BpOsdDecoder,
+    BeliefFindDecoder,
+    BpLsdDecoder,
+    BpOsdDecoder,
     MWPFDecoder,
 )
 from .rep_code_ref import (
@@ -17,23 +17,23 @@ from .rep_code_ref import (
     expected_time_error_decoded_obs,
 )
 from .two_logical_ref import (
-    reference_dem as two_logical_dem,
-    reference_syndromes as two_logical_syndromes,
-    decoded_obs as two_logical_decoded_obs,
+    two_logical_dem,
+    two_logical_syndromes,
+    two_logical_expected_decoded_obs,
 )
 
 DECODERS = [
     TesseractDecoder,
-    #BeliefFindDecoder,
-    #BpLsdDecoder,
-    #BpOsdDecoder,
+    BeliefFindDecoder,
+    BpLsdDecoder,
+    BpOsdDecoder,
     MWPFDecoder,
 ]
 
 TEST_CASES = [
     (space_error_dem, space_error_syndromes, expected_space_error_decoded_obs),
     (time_error_dem, time_error_syndromes, expected_time_error_decoded_obs),
-    (two_logical_dem, two_logical_syndromes, two_logical_decoded_obs),
+    (two_logical_dem, two_logical_syndromes, two_logical_expected_decoded_obs),
 ]
 
 
