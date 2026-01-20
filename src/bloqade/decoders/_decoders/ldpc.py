@@ -198,8 +198,8 @@ class BpOsdDecoder(BaseDecoder):
         serial_schedule_order (Optional[List[int]]): A list of integers that specify the
             serial schedule order. Must be of length equal to the block length of the code,
             by default None.
-        osd_method (str): The OSD method used. Must be one of {'OSD_0', 'OSD_E', 'OSD_CS'}.
-        osd_order (int): The OSD order, by default 0.
+        osd_method (Optional[str]): The OSD method used. Must be one of {'OSD_0', 'OSD_E', 'OSD_CS'}.
+        osd_order (Optional[int]): The OSD order, by default 0.
     """
 
     def __init__(
