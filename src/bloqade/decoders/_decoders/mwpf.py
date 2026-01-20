@@ -9,7 +9,7 @@ try:
     from mwpf import SinterMWPFDecoder
 except ImportError as e:
     raise ImportError(
-        "mwpf is required for MWPFDecoder. "
+        "The mwpf package is required for MWPFDecoder. "
         "Install it with: pip install mwpf[stim]"
     ) from e
 

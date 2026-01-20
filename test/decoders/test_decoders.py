@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from bloqade.decoders.decoders import (
+from bloqade.decoders import (
     TesseractDecoder,
     BeliefFindDecoder,
     BpLsdDecoder,

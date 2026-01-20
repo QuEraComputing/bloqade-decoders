@@ -9,7 +9,7 @@ try:
     import tesseract_decoder.tesseract as tesseract
 except ImportError as e:
     raise ImportError(
-        "tesseract-decoder is required for TesseractDecoder. "
+        "The tesseract-decoder package is required for TesseractDecoder. "
         "Install it with: pip install tesseract-decoder"
     ) from e
 
