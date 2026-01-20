@@ -1,7 +1,8 @@
+from typing import Optional
+
 import stim
 import numpy as np
 import numpy.typing as npt
-from typing import Optional
 
 from .base import BaseDecoder
 
@@ -17,7 +18,7 @@ except ImportError as e:
 class MWPFDecoder(BaseDecoder):
     """Hypgergraph Minimum Weight Parity Factor decoder wrapper.
 
-    Arguments match mwpf.SinterMWPFDecoder defaul; defaults are used if not specified.
+    Arguments match mwpf.SinterMWPFDecoder default; defaults are used if not specified.
 
     Args:
         dem (stim.DetectorErrorModel): The detector error model describing the error structure.
@@ -49,9 +50,7 @@ class MWPFDecoder(BaseDecoder):
         self._compiled_decoder = self._sinter_decoder.compile_decoder_for_dem(dem=dem)
 
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
-        bit_packed = np.packbits(
-            np.array([detector_bits]), axis=-1, bitorder="little"
-        )
+        bit_packed = np.packbits(np.array([detector_bits]), axis=-1, bitorder="little")
         prediction = self._compiled_decoder.decode_shots_bit_packed(
             bit_packed_detection_event_data=bit_packed
         )

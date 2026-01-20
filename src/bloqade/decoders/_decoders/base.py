@@ -1,7 +1,8 @@
+from abc import ABC, abstractmethod
+
 import stim
 import numpy as np
 import numpy.typing as npt
-from abc import ABC, abstractmethod
 
 
 class BaseDecoder(ABC):
@@ -16,7 +17,7 @@ class BaseDecoder(ABC):
     def decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a batch or single shot of detector bits.
 
-        This method accepts either an array of booleans (representing a single shot) 
+        This method accepts either an array of booleans (representing a single shot)
         or an array of arrays of booleans (representing a batch of shots).
 
         """

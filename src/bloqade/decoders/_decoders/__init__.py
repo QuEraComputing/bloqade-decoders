@@ -1,4 +1,8 @@
-from .base import BaseDecoder
-from .tesseract import TesseractDecoder
-from .ldpc import BeliefFindDecoder, BpLsdDecoder, BpOsdDecoder
-from .mwpf import MWPFDecoder
+from .base import BaseDecoder as BaseDecoder
+from .ldpc import (
+    BpLsdDecoder as BpLsdDecoder,
+    BpOsdDecoder as BpOsdDecoder,
+    BeliefFindDecoder as BeliefFindDecoder,
+)
+from .mwpf import MWPFDecoder as MWPFDecoder
+from .tesseract import TesseractDecoder as TesseractDecoder

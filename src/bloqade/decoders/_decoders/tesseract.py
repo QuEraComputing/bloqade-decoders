@@ -1,7 +1,8 @@
+from typing import Optional
+
 import stim
 import numpy as np
 import numpy.typing as npt
-from typing import Optional
 
 from .base import BaseDecoder
 
@@ -104,4 +105,3 @@ class TesseractDecoder(BaseDecoder):
             1D numpy array of boolean observable outcomes.
         """
         return self._decoder.decode(detector_bits)
-

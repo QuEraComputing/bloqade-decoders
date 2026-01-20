@@ -2,19 +2,20 @@ import numpy as np
 import pytest
 
 from bloqade.decoders import (
-    TesseractDecoder,
-    BeliefFindDecoder,
+    MWPFDecoder,
     BpLsdDecoder,
     BpOsdDecoder,
-    MWPFDecoder,
+    TesseractDecoder,
+    BeliefFindDecoder,
 )
+
 from .rep_code_ref import (
-    space_error_dem,
-    space_error_syndromes,
-    expected_space_error_decoded_obs,
     time_error_dem,
+    space_error_dem,
     time_error_syndromes,
+    space_error_syndromes,
     expected_time_error_decoded_obs,
+    expected_space_error_decoded_obs,
 )
 from .two_logical_ref import (
     two_logical_dem,
