@@ -1,3 +1,15 @@
+def test_decoder_exports():
+    from bloqade import decoders
+
+    assert hasattr(decoders, "BaseDecoder")
+    assert hasattr(decoders, "TesseractDecoder")
+    assert hasattr(decoders, "BeliefFindDecoder")
+    assert hasattr(decoders, "BpLsdDecoder")
+    assert hasattr(decoders, "BpOsdDecoder")
+    assert hasattr(decoders, "MWPFDecoder")
+    assert hasattr(decoders, "dialects")
+
+
 def test_annotate_exports():
     from bloqade.decoders.dialects import annotate
 
