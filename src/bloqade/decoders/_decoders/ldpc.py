@@ -53,7 +53,9 @@ class BeliefFindDecoder(BaseDecoder):
         bits_per_step: int = 0,
     ):
         self._dem = dem
-        dem_matrix = detector_error_model_to_check_matrices(dem)
+        dem_matrix = detector_error_model_to_check_matrices(
+            dem, allow_undecomposed_hyperedges=True
+        )
         self._observable_matrix = dem_matrix.observables_matrix
 
         self._decoder = LdpcBeliefFindDecoder(
@@ -122,7 +124,9 @@ class BpLsdDecoder(BaseDecoder):
         lsd_method: Literal["LSD_0", "LSD_E", "LSD_CS"] = "LSD_0",
     ):
         self._dem = dem
-        dem_matrix = detector_error_model_to_check_matrices(dem)
+        dem_matrix = detector_error_model_to_check_matrices(
+            dem, allow_undecomposed_hyperedges=True
+        )
         self._observable_matrix = dem_matrix.observables_matrix
 
         self._decoder = LdpcBpLsdDecoder(
@@ -187,7 +191,9 @@ class BpOsdDecoder(BaseDecoder):
         osd_order: int = 0,
     ):
         self._dem = dem
-        dem_matrix = detector_error_model_to_check_matrices(dem)
+        dem_matrix = detector_error_model_to_check_matrices(
+            dem, allow_undecomposed_hyperedges=True
+        )
         self._observable_matrix = dem_matrix.observables_matrix
 
         self._decoder = LdpcBpOsdDecoder(
