@@ -5,10 +5,23 @@ description = "Decoder related statements and interfaces for Bloqade."
 readme = "README.md"
 authors = [
     { name = "johnzl-777", email="jlong@quera.com"},
+    { name = "rafaelha", email="rhaenel@quera.com"}
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "beliefmatching>=0.2.0",
     "kirin-toolchain~=0.22.2",
+    "ldpc>=2.4.1",
+    "numpy>=2.2.6",
+    "stim>=1.15.0",
+]
+
+[project.optional-dependencies]
+tesseract = [
+    "tesseract-decoder>=0.1.1.dev20260109233451",
+]
+mwpf = [
+    "mwpf[stim]>=0.2.12",
 ]
 
 [build-system]
