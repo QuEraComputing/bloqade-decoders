@@ -2,7 +2,7 @@
 
 The QEC user interface providing integration with popular open-source decoders for the [Bloqade SDK](https://github.com/QuEraComputing/bloqade).
 
-By default, the following decoders from the (`ldpc`)[https://github.com/quantumgizmos/ldpc]package and
+By default, the following decoders from the [`ldpc`](https://github.com/quantumgizmos/ldpc) package and
 their corresponding interfaces are immediately available for decoding use upon installation of this package:
 
 - BP+OSD - through `bloqade.decoders.BpOsdDecoder`
