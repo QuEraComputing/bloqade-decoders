@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal
 
 import stim
 import numpy as np
@@ -22,31 +22,31 @@ class MWPFDecoder(BaseDecoder):
 
     Args:
         dem (stim.DetectorErrorModel): The detector error model describing the error structure.
-        decoder_type (Optional[str]): Decoder class used to construct the MWPF decoder. All decoder
+        decoder_type (Literal["SolverSerialJointSingleHair", "SolverSerialUnionFind", "SolverSerialSingleHair"]): Decoder class used to construct the MWPF decoder. All decoder
             types inherit from `SolverSerialPlugins` but provide different plugins for optimizing
             the primal and/or dual solutions. For example, `SolverSerialUnionFind` is the most
             basic solver without any plugin: it only grows clusters until the first valid solution
             appears. More optimized solvers use plugins to further optimize the solution at the
             cost of longer decoding time.  Default is "SolverSerialJointSingleHair".
-        cluster_node_limit (Optional[int]): The maximum number of nodes in a cluster, used to tune
+        cluster_node_limit (int): The maximum number of nodes in a cluster, used to tune
             decoder performance. Default is 50.
     """
 
     def __init__(
         self,
         dem: stim.DetectorErrorModel,
-        decoder_type: Optional[str] = None,
-        cluster_node_limit: Optional[int] = None,
+        decoder_type: Literal[
+            "SolverSerialJointSingleHair",
+            "SolverSerialUnionFind",
+            "SolverSerialSingleHair",
+        ] = "SolverSerialJointSingleHair",
+        cluster_node_limit: int = 50,
     ):
         self._dem = dem
-
-        decoder_kwargs: dict = {}
-        if decoder_type is not None:
-            decoder_kwargs["decoder_type"] = decoder_type
-        if cluster_node_limit is not None:
-            decoder_kwargs["cluster_node_limit"] = cluster_node_limit
-
-        self._sinter_decoder = SinterMWPFDecoder(**decoder_kwargs)
+        self._sinter_decoder = SinterMWPFDecoder(
+            decoder_type=decoder_type,
+            cluster_node_limit=cluster_node_limit,
+        )
         self._compiled_decoder = self._sinter_decoder.compile_decoder_for_dem(dem=dem)
 
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
