@@ -6,14 +6,6 @@ import numpy.typing as npt
 
 from .base import BaseDecoder
 
-try:
-    import tesseract_decoder.tesseract as tesseract
-except ImportError as e:
-    raise ImportError(
-        "The tesseract-decoder package is required for TesseractDecoder. "
-        "Install it with: pip install tesseract-decoder"
-    ) from e
-
 
 class TesseractDecoder(BaseDecoder):
     """Tesseract decoder wrapper.
@@ -27,7 +19,7 @@ class TesseractDecoder(BaseDecoder):
             including the detectors and relationships between them. This model
             is essential for the decoder to understand the syndrome and
             potential error locations.
-        det_beam (int): Beam search cutoff. Specifies a threshold for
+        det_beam (int | None): Beam search cutoff. Specifies a threshold for
             the number of "residual detection events" a node can have before
             it is pruned from the search. A lower value makes the search more
             aggressive, potentially sacrificing accuracy for speed. Default is
@@ -62,7 +54,7 @@ class TesseractDecoder(BaseDecoder):
     def __init__(
         self,
         dem: stim.DetectorErrorModel,
-        det_beam: int = tesseract.INF_DET_BEAM,
+        det_beam: int | None = None,
         beam_climbing: bool = False,
         no_revisit_dets: bool = False,
         verbose: bool = False,
@@ -70,6 +62,17 @@ class TesseractDecoder(BaseDecoder):
         det_orders: list[list[int]] = [],
         det_penalty: float = 0.0,
     ):
+        try:
+            import tesseract_decoder.tesseract as tesseract
+        except ImportError as e:
+            raise ImportError(
+                "The tesseract-decoder package is required for TesseractDecoder. "
+                "Install it with: pip install tesseract-decoder"
+            ) from e
+
+        if det_beam is None:
+            det_beam = tesseract.INF_DET_BEAM
+
         self._dem = dem
         self._config = tesseract.TesseractConfig(
             dem=dem,

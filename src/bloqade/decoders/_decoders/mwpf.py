@@ -6,14 +6,6 @@ import numpy.typing as npt
 
 from .base import BaseDecoder
 
-try:
-    from mwpf import SinterMWPFDecoder
-except ImportError as e:
-    raise ImportError(
-        "The mwpf package is required for MWPFDecoder. "
-        "Install it with: pip install mwpf[stim]"
-    ) from e
-
 
 class MWPFDecoder(BaseDecoder):
     """Hypergraph Minimum Weight Parity Factor decoder wrapper.
@@ -42,6 +34,14 @@ class MWPFDecoder(BaseDecoder):
         ] = "SolverSerialJointSingleHair",
         cluster_node_limit: int = 50,
     ):
+        try:
+            from mwpf import SinterMWPFDecoder
+        except ImportError as e:
+            raise ImportError(
+                "The mwpf package is required for MWPFDecoder. "
+                "Install it with: pip install mwpf[stim]"
+            ) from e
+
         self._dem = dem
         self._sinter_decoder = SinterMWPFDecoder(
             decoder_type=decoder_type,
