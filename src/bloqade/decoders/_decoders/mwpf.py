@@ -39,7 +39,7 @@ class MWPFDecoder(BaseDecoder):
         except ImportError as e:
             raise ImportError(
                 "The mwpf package is required for MWPFDecoder. "
-                "Install it with: pip install mwpf[stim]"
+                'You can install it via: pip install "mwpf[stim]"'
             ) from e
 
         self._dem = dem

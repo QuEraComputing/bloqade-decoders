@@ -67,7 +67,7 @@ class TesseractDecoder(BaseDecoder):
         except ImportError as e:
             raise ImportError(
                 "The tesseract-decoder package is required for TesseractDecoder. "
-                "Install it with: pip install tesseract-decoder"
+                'You can install it via: pip install "tesseract-decoder"'
             ) from e
 
         if det_beam is None:
