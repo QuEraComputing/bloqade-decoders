@@ -1,4 +1,4 @@
-from typing import Optional
+import sys
 
 import stim
 import numpy as np
@@ -27,33 +27,33 @@ class TesseractDecoder(BaseDecoder):
             including the detectors and relationships between them. This model
             is essential for the decoder to understand the syndrome and
             potential error locations.
-        det_beam (int | None): Beam search cutoff. Specifies a threshold for
+        det_beam (int): Beam search cutoff. Specifies a threshold for
             the number of "residual detection events" a node can have before
             it is pruned from the search. A lower value makes the search more
             aggressive, potentially sacrificing accuracy for speed. Default is
             no beam cutoff (INF_DET_BEAM).
-        beam_climbing (bool | None): When True, enables a heuristic that
+        beam_climbing (bool): When True, enables a heuristic that
             causes the decoder to try different det_beam values (up to a
             maximum) to find a good decoding path. This can improve the
             decoder's chance of finding the most likely error, even with an
             initial narrow beam search. Default is False.
-        no_revisit_dets (bool | None): When True, activates a heuristic to
+        no_revisit_dets (bool): When True, activates a heuristic to
             prevent the decoder from revisiting nodes that have the same set
             of leftover detection events as a node it has already visited.
             This can help reduce search redundancy and improve decoding speed.
             Default is False.
-        verbose (bool | None): When True, enables verbose logging for
+        verbose (bool): When True, enables verbose logging for
             debugging and understanding the decoder's internal behavior.
             Default is False.
-        pqlimit (int | None): Limit on the number of nodes in the priority
+        pqlimit (int): Limit on the number of nodes in the priority
             queue. This can be used to constrain memory usage. Default is
             sys.maxsize (effectively unbounded).
-        det_orders (list[list[int]] | None): A list of lists of integers,
+        det_orders (list[list[int]]): A list of lists of integers,
             where each inner list represents an ordering of the detectors.
             Used for "ensemble reordering," an optimization that tries
             different detector orderings to improve search convergence.
             Default is an empty list (single, fixed ordering).
-        det_penalty (float | None): A cost added for each residual detection
+        det_penalty (float): A cost added for each residual detection
             event. This encourages the decoder to prioritize paths that
             resolve more detection events, steering the search towards more
             complete solutions. Default is 0.0 (no penalty).
@@ -62,37 +62,25 @@ class TesseractDecoder(BaseDecoder):
     def __init__(
         self,
         dem: stim.DetectorErrorModel,
-        det_beam: Optional[int] = None,
-        beam_climbing: Optional[bool] = None,
-        no_revisit_dets: Optional[bool] = None,
-        verbose: Optional[bool] = None,
-        pqlimit: Optional[int] = None,
-        det_orders: Optional[list[list[int]]] = None,
-        det_penalty: Optional[float] = None,
+        det_beam: int = tesseract.INF_DET_BEAM,
+        beam_climbing: bool = False,
+        no_revisit_dets: bool = False,
+        verbose: bool = False,
+        pqlimit: int = sys.maxsize,
+        det_orders: list[list[int]] = [],
+        det_penalty: float = 0.0,
     ):
-
         self._dem = dem
-
-        # Collect only user-set arguments into a dictionary
-        config_kwargs: dict = {"dem": dem}
-
-        if det_beam is not None:
-            config_kwargs["det_beam"] = det_beam
-        if beam_climbing is not None:
-            config_kwargs["beam_climbing"] = beam_climbing
-        if no_revisit_dets is not None:
-            config_kwargs["no_revisit_dets"] = no_revisit_dets
-        if verbose is not None:
-            config_kwargs["verbose"] = verbose
-        if pqlimit is not None:
-            config_kwargs["pqlimit"] = pqlimit
-        if det_orders is not None:
-            config_kwargs["det_orders"] = det_orders
-        if det_penalty is not None:
-            config_kwargs["det_penalty"] = det_penalty
-
-        self._config_kwargs = config_kwargs
-        self._config = tesseract.TesseractConfig(**config_kwargs)
+        self._config = tesseract.TesseractConfig(
+            dem=dem,
+            det_beam=det_beam,
+            beam_climbing=beam_climbing,
+            no_revisit_dets=no_revisit_dets,
+            verbose=verbose,
+            pqlimit=pqlimit,
+            det_orders=det_orders,
+            det_penalty=det_penalty,
+        )
         self._decoder = tesseract.TesseractDecoder(self._config)
 
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
