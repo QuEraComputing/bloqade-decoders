@@ -52,3 +52,14 @@ def test_interface_functions():
 
     assert callable(annotate.set_detector)
     assert callable(annotate.set_observable)
+
+
+def test_immediate_loop_exports():
+    from bloqade.decoders.dialects import immediate_loop
+
+    # Statements (via stmts)
+    assert hasattr(immediate_loop.stmts, "Repeat")
+
+    # Interface functions
+    assert hasattr(immediate_loop, "repeat")
+    assert callable(immediate_loop.repeat)
