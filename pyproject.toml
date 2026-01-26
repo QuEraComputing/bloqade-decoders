@@ -1,6 +1,6 @@
 [project]
 name = "bloqade-decoders"
-version = "0.2.0"
+version = "0.3.0"
 description = "Decoder related statements and interfaces for Bloqade."
 readme = "README.md"
 authors = [
