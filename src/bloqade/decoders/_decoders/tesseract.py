@@ -1,5 +1,3 @@
-import sys
-
 import stim
 import numpy as np
 import numpy.typing as npt
@@ -39,7 +37,7 @@ class TesseractDecoder(BaseDecoder):
             Default is False.
         pqlimit (int): Limit on the number of nodes in the priority
             queue. This can be used to constrain memory usage. Default is
-            sys.maxsize (effectively unbounded).
+            200_000.
         det_orders (list[list[int]]): A list of lists of integers,
             where each inner list represents an ordering of the detectors.
             Used for "ensemble reordering," an optimization that tries
@@ -58,7 +56,7 @@ class TesseractDecoder(BaseDecoder):
         beam_climbing: bool = False,
         no_revisit_dets: bool = False,
         verbose: bool = False,
-        pqlimit: int = sys.maxsize,
+        pqlimit: int = 200_000,
         det_orders: list[list[int]] = [],
         det_penalty: float = 0.0,
     ):
@@ -84,7 +82,7 @@ class TesseractDecoder(BaseDecoder):
             det_orders=det_orders,
             det_penalty=det_penalty,
         )
-        self._decoder = tesseract.TesseractDecoder(self._config)
+        self._decoder = self._config.compile_decoder()
 
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a single shot of detector bits.
