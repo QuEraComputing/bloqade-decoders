@@ -27,8 +27,8 @@ class SetDetector(ir.Statement):
 class SetObservable(ir.Statement):
     """Statement for defining an observable from measurement results.
 
-    An observable is defined by a set of measurement results and an
-    index identifying which logical observable this corresponds to.
+    An observable is defined by a set of measurement results. The observable
+    index is assigned automatically by the MeasurementIDAnalysis pass.
     """
 
     traits = frozenset({lowering.FromPythonCall()})
@@ -36,5 +36,4 @@ class SetObservable(ir.Statement):
     measurements: ir.SSAValue = info.argument(
         ilist.IListType[MeasurementResultType, types.Any]
     )
-    idx: ir.SSAValue = info.argument(types.Int)
     result: ir.ResultValue = info.result(ObservableType)

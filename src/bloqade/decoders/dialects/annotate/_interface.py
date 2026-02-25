@@ -17,5 +17,4 @@ def set_detector(
 @wraps(SetObservable)
 def set_observable(
     measurements: ilist.IList[MeasurementResult, Any] | list[MeasurementResult],
-    idx: int,
 ) -> Observable: ...
