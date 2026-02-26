@@ -20,6 +20,7 @@ def test_annotate_exports():
     # Statements (via stmts)
     assert hasattr(annotate.stmts, "SetDetector")
     assert hasattr(annotate.stmts, "SetObservable")
+    assert hasattr(annotate.stmts, "Repeat")
 
     # Types (via types)
     assert hasattr(annotate.types, "MeasurementResult")
@@ -36,6 +37,7 @@ def test_annotate_exports():
     # Interface functions
     assert hasattr(annotate, "set_detector")
     assert hasattr(annotate, "set_observable")
+    assert hasattr(annotate, "repeat")
 
 
 def test_measurement_result_value_enum():
@@ -52,3 +54,4 @@ def test_interface_functions():
 
     assert callable(annotate.set_detector)
     assert callable(annotate.set_observable)
+    assert callable(annotate.repeat)
