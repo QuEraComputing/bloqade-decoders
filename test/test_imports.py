@@ -13,16 +13,12 @@ def test_decoder_exports():
 def test_annotate_exports():
     from bloqade.decoders.dialects import annotate
 
-    # Submodules
     assert hasattr(annotate, "stmts")
     assert hasattr(annotate, "types")
 
-    # Statements (via stmts)
     assert hasattr(annotate.stmts, "SetDetector")
     assert hasattr(annotate.stmts, "SetObservable")
-    assert hasattr(annotate.stmts, "Repeat")
 
-    # Types (via types)
     assert hasattr(annotate.types, "MeasurementResult")
     assert hasattr(annotate.types, "MeasurementResultType")
     assert hasattr(annotate.types, "MeasurementResultValue")
@@ -31,13 +27,23 @@ def test_annotate_exports():
     assert hasattr(annotate.types, "Observable")
     assert hasattr(annotate.types, "ObservableType")
 
-    # Dialect
     assert hasattr(annotate, "dialect")
 
-    # Interface functions
     assert hasattr(annotate, "set_detector")
     assert hasattr(annotate, "set_observable")
-    assert hasattr(annotate, "repeat")
+
+
+def test_immediate_loop_exports():
+    from bloqade.decoders.dialects import immediate_loop
+
+    assert hasattr(immediate_loop, "stmts")
+    assert hasattr(immediate_loop, "typeinfer")
+    assert hasattr(immediate_loop, "dialect")
+
+    assert hasattr(immediate_loop.stmts, "Repeat")
+
+    assert hasattr(immediate_loop, "repeat")
+    assert callable(immediate_loop.repeat)
 
 
 def test_measurement_result_value_enum():
@@ -54,4 +60,3 @@ def test_interface_functions():
 
     assert callable(annotate.set_detector)
     assert callable(annotate.set_observable)
-    assert callable(annotate.repeat)
