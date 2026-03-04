@@ -10,7 +10,7 @@ class MeasurementResultValue(IntEnum):
 
 
 class MeasurementResult:
-    pass
+    value: MeasurementResultValue
 
 
 class Detector:
