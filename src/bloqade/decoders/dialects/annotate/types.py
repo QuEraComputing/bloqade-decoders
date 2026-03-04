@@ -1,5 +1,5 @@
 from enum import IntEnum
-
+from dataclasses import dataclass
 from kirin import types
 
 
@@ -9,6 +9,7 @@ class MeasurementResultValue(IntEnum):
     Lost = 2
 
 
+@dataclass
 class MeasurementResult:
     value: MeasurementResultValue
 
