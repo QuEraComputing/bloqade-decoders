@@ -1,4 +1,8 @@
-from bloqade.decoders.dialects.annotate.types import MeasurementResult, MeasurementResultValue
+from bloqade.decoders.dialects.annotate.types import (
+    MeasurementResult,
+    MeasurementResultValue,
+)
+
 
 def test_measurement_result_init():
     result = MeasurementResult(value=MeasurementResultValue.Zero)
