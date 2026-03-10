@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import ClassVar, cast
+from typing import ClassVar, cast, override
 
 import numpy as np
 import numpy.typing as npt
+import sinter
 import stim
 from stim import DemInstruction
 
@@ -270,6 +271,46 @@ class GurobiDecoder(BaseDecoder):
         if return_weights:
             return decoded_obs, self.weight_from_error(decoded_errors)
         return decoded_obs
+
+
+class _CompiledGurobiDecoder(sinter.CompiledDecoder):
+    """Compiled decoder wrapping GurobiDecoder for sinter."""
+
+    def __init__(self, decoder: GurobiDecoder) -> None:
+        self._decoder = decoder
+
+    @override
+    def decode_shots_bit_packed(
+        self,
+        *,
+        bit_packed_detection_event_data: np.ndarray,
+    ) -> np.ndarray:
+        num_dets = self._decoder.num_detectors
+        det_shots = np.unpackbits(
+            bit_packed_detection_event_data,
+            axis=1,
+            bitorder="little",
+        )[:, :num_dets].astype(bool)
+        obs_predictions = self._decoder.decode(det_shots)
+        assert isinstance(obs_predictions, np.ndarray)
+        return np.packbits(
+            obs_predictions.astype(np.uint8),
+            axis=1,
+            bitorder="little",
+        )
+
+
+class SinterGurobiDecoder(sinter.Decoder):
+    """Sinter-compatible adapter for the GurobiDecoder (MLE)."""
+
+    @override
+    def compile_decoder_for_dem(
+        self,
+        *,
+        dem: stim.DetectorErrorModel,
+    ) -> sinter.CompiledDecoder:
+        decoder = GurobiDecoder(dem)
+        return _CompiledGurobiDecoder(decoder)
 
 
 def _check_no_separators(dem: stim.DetectorErrorModel) -> None:

@@ -8,6 +8,8 @@ from ._decoders import (
     BpOsdDecoder as BpOsdDecoder,
     TesseractDecoder as TesseractDecoder,
     BeliefFindDecoder as BeliefFindDecoder,
+    SinterGurobiDecoder as SinterGurobiDecoder,
+    SinterTableDecoder as SinterTableDecoder,
 )
 from .dialects.annotate.types import (
     Detector as Detector,

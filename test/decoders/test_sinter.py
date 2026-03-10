@@ -5,10 +5,7 @@ import pytest
 import sinter
 import stim
 
-from bloqade.decoders._decoders.sinter import (
-    SinterGurobiDecoder,
-    SinterTableDecoder,
-)
+from bloqade.decoders import SinterGurobiDecoder, SinterTableDecoder
 
 
 def simple_dem():
