@@ -2,6 +2,7 @@ from . import dialects as dialects
 from ._decoders import (
     BaseDecoder as BaseDecoder,
     GurobiDecoder as GurobiDecoder,
+    TableDecoder as TableDecoder,
     MWPFDecoder as MWPFDecoder,
     BpLsdDecoder as BpLsdDecoder,
     BpOsdDecoder as BpOsdDecoder,
