@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from bloqade.decoders import (
+    GurobiDecoder,
     MWPFDecoder,
     BpLsdDecoder,
     BpOsdDecoder,
@@ -29,6 +30,7 @@ DECODERS = [
     BpLsdDecoder,
     BpOsdDecoder,
     MWPFDecoder,
+    GurobiDecoder,
 ]
 
 TEST_CASES = [
