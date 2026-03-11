@@ -263,3 +263,48 @@ def test_sinter_collect_gurobi():
     assert stats[0].shots == 100
     assert stats[0].errors <= stats[0].shots
     assert stats[0].errors < 50
+
+
+def test_single_shot_decode_with_weights():
+    """Single-shot decode with return_weights=True (covers line 278)."""
+    dem = regular_dem()
+    det_shots = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 1], dtype=bool)
+    decoder = GurobiDecoder(dem)
+    obs, weights = decoder.decode(det_shots, return_weights=True)
+    assert obs.ndim == 1
+    assert np.array_equal(obs, np.array([True]))
+    assert isinstance(weights, np.ndarray)
+
+
+def test_separator_targets_rejected():
+    """DEM with separator targets raises ValueError (covers line 124)."""
+    dem = stim.DetectorErrorModel("""
+        error(0.1) D0 ^ D1 L0
+        """)
+    with pytest.raises(ValueError, match="separator"):
+        GurobiDecoder(dem)
+
+
+def test_multi_observable_dem():
+    """DEM with multiple observables covers max_observable_index update (line 82)."""
+    dem = stim.DetectorErrorModel("""
+        error(0.1) D0 L0
+        error(0.1) D1 L1
+        """)
+    decoder = GurobiDecoder(dem)
+    assert decoder.max_observable_index == 1
+    assert decoder.num_observables == 2
+    det_shots = np.array([[1, 0], [0, 1]], dtype=bool)
+    result = decoder.decode(det_shots)
+    assert result.shape == (2, 2)
+
+
+def test_repeat_block_dem():
+    """DEM with repeat block (non-DemInstruction) is handled (covers line 68)."""
+    dem = stim.DetectorErrorModel("""
+        repeat 3 {
+            error(0.1) D0 L0
+        }
+        """)
+    decoder = GurobiDecoder(dem)
+    assert decoder.num_detectors == 1

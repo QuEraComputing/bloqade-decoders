@@ -289,3 +289,21 @@ def test_sinter_collect_table():
     assert stats[0].shots == 100
     assert stats[0].errors <= stats[0].shots
     assert stats[0].errors < 50
+
+
+def test_update_det_obs_counts_wrong_columns():
+    """Wrong column count raises ValueError (covers line 199)."""
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\n")
+    decoder = TableDecoder(dem, det_obs_counts=np.array([10, 0, 0, 1]))
+    wrong_shots = np.array([[0, 0, 0]], dtype=bool)  # 3 cols, expected 2
+    with pytest.raises(ValueError, match="columns"):
+        decoder.update_det_obs_counts(wrong_shots)
+
+
+def test_decode_det_obs_counts_wrong_length():
+    """Wrong array length raises ValueError (covers line 260)."""
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\n")
+    decoder = TableDecoder(dem, det_obs_counts=np.array([10, 0, 0, 1]))
+    wrong_counts = np.array([1, 2, 3])  # length 3, expected 4
+    with pytest.raises(ValueError, match="length"):
+        decoder.decode_det_obs_counts(wrong_counts)
