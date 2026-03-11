@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, ClassVar, cast, overload, override
+from typing import Literal, ClassVar, cast, overload
 
 import stim
 import numpy as np
@@ -290,7 +290,6 @@ class _CompiledGurobiDecoder(_SinterCompiledDecoder):  # type: ignore[misc]
     def __init__(self, decoder: GurobiDecoder) -> None:
         self._decoder = decoder
 
-    @override
     def decode_shots_bit_packed(
         self,
         *,
@@ -314,7 +313,6 @@ class _CompiledGurobiDecoder(_SinterCompiledDecoder):  # type: ignore[misc]
 class SinterGurobiDecoder(_SinterDecoder):  # type: ignore[misc]
     """Sinter-compatible adapter for the GurobiDecoder (MLE)."""
 
-    @override
     def compile_decoder_for_dem(
         self,
         *,

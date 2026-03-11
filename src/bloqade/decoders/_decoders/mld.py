@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import override
 
 import stim
 import numpy as np
@@ -305,7 +304,6 @@ class _CompiledTableDecoder(_SinterCompiledDecoder):  # type: ignore[misc]
     def __init__(self, decoder: TableDecoder) -> None:
         self._decoder = decoder
 
-    @override
     def decode_shots_bit_packed(
         self,
         *,
@@ -342,7 +340,6 @@ class SinterTableDecoder(_SinterDecoder):  # type: ignore[misc]
     def __init__(self, num_shots: int = 2**26) -> None:
         self.num_shots = num_shots
 
-    @override
     def compile_decoder_for_dem(
         self,
         *,

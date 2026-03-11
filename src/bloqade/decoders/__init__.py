@@ -1,15 +1,15 @@
 from . import dialects as dialects
 from ._decoders import (
     BaseDecoder as BaseDecoder,
-    GurobiDecoder as GurobiDecoder,
-    TableDecoder as TableDecoder,
     MWPFDecoder as MWPFDecoder,
     BpLsdDecoder as BpLsdDecoder,
     BpOsdDecoder as BpOsdDecoder,
+    TableDecoder as TableDecoder,
+    GurobiDecoder as GurobiDecoder,
     TesseractDecoder as TesseractDecoder,
     BeliefFindDecoder as BeliefFindDecoder,
-    SinterGurobiDecoder as SinterGurobiDecoder,
     SinterTableDecoder as SinterTableDecoder,
+    SinterGurobiDecoder as SinterGurobiDecoder,
 )
 from .dialects.annotate.types import (
     Detector as Detector,
