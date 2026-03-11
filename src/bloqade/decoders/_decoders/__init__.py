@@ -1,4 +1,7 @@
-from .mld import TableDecoder as TableDecoder, SinterTableDecoder as SinterTableDecoder
+from .mld import (
+    TableDecoder as TableDecoder,
+    SinterTableDecoder as SinterTableDecoder,
+)
 from .mle import (
     GurobiDecoder as GurobiDecoder,
     SinterGurobiDecoder as SinterGurobiDecoder,

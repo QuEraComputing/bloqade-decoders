@@ -47,6 +47,13 @@ class TableDecoder(BaseDecoder):
         det_obs_counts: np.ndarray,
     ) -> None:
         super().__init__(dem)
+        expected_len = 2 ** (dem.num_detectors + dem.num_observables)
+        if det_obs_counts.shape != (expected_len,):
+            raise ValueError(
+                f"det_obs_counts must have shape ({expected_len},) for "
+                f"{dem.num_detectors} detectors and {dem.num_observables} "
+                f"observables, got {det_obs_counts.shape}"
+            )
         self._dem = dem
         self._det_obs_counts = det_obs_counts
         self._df = None

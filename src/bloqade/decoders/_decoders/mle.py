@@ -51,21 +51,31 @@ class GurobiDecoder(BaseDecoder):
                 'You can install it via: pip install "gurobipy"'
             ) from e
 
+        try:
+            import scipy.sparse  # noqa: F401
+        except ImportError as e:
+            raise ImportError(
+                "The scipy package is required for GurobiDecoder. "
+                'You can install it via: pip install "bloqade-decoders[mle]"'
+            ) from e
+
         super().__init__(dem)
-        self._dem = dem
+        self._dem = dem.flattened()
         self._check_no_separators(dem)
 
         import scipy.sparse
 
         # Single pass over DEM to extract weights, hyperedges, and observables
         weights: list[float] = []
-        max_observable_index = 0
+        max_observable_index = -1
         hyperedge_dets: list[list[int]] = []
         hyperedge_obs: list[list[int]] = []
 
-        for instruction in dem:  # type: ignore[union-attr]
+        for instruction in self._dem:  # type: ignore[union-attr]
             if not isinstance(instruction, DemInstruction):
-                continue
+                raise Exception(
+                    "The detector-error model should be already flattened. But still got DemRepeatBlock."
+                )
             if instruction.type == "error" and instruction.args_copy()[0] != 0:
                 probability = instruction.args_copy()[0]
                 weights.append(np.log(probability / (1 - probability)))
@@ -98,10 +108,8 @@ class GurobiDecoder(BaseDecoder):
                 [int(x) for x in np.argwhere(row)[:, 1].flatten()]  # type: ignore[arg-type]
             )
 
-        # Build observable indices
-        observable_indices: list[list[int]] = [
-            [] for _ in range(max_observable_index + 1)
-        ]
+        # Build observable indices (sized from DEM, not max seen index)
+        observable_indices: list[list[int]] = [[] for _ in range(dem.num_observables)]
         for e_idx, obs_targets in enumerate(hyperedge_obs):
             for obs_val in obs_targets:
                 observable_indices[obs_val].append(e_idx)
@@ -156,7 +164,7 @@ class GurobiDecoder(BaseDecoder):
         self, conditional_logicals: list[int] | None = None
     ) -> GurobiDecoder:
         if conditional_logicals is None:
-            conditional_logicals = list(range(self._max_observable_index + 1))
+            conditional_logicals = list(range(self._dem.num_observables))
         conditional_decoder = GurobiDecoder(self._dem)
         for logical_idx in conditional_logicals:
             es = conditional_decoder._observable_indices[logical_idx]
@@ -174,8 +182,7 @@ class GurobiDecoder(BaseDecoder):
         num_errors = len(self._weights)
         errors = np.zeros([num_shots, num_errors], dtype=bool)
         env = GurobiDecoder._get_env()
-        if not verbose:
-            env.setParam("OutputFlag", 0)  # type: ignore[union-attr]
+        env.setParam("OutputFlag", 1 if verbose else 0)  # type: ignore[union-attr]
 
         weights = self._weights
         detector_vertices = self._detector_vertices
@@ -208,8 +215,13 @@ class GurobiDecoder(BaseDecoder):
                 m.addConstr(constraint == detector_shot[i], name="c" + str(i))
 
             m.optimize()
-            if m.status != 2 and verbose:
-                print("Did not find optimal solution", m.status)
+            if m.status != GRB.OPTIMAL:
+                if verbose:
+                    print("Did not find optimal solution", m.status)
+                m.close()
+                raise RuntimeError(
+                    f"Gurobi did not find an optimal solution. Status: {m.status}"
+                )
             error = np.round(
                 np.array([e.X for e in error_variables]), decimals=0
             ).astype(bool)
@@ -220,8 +232,7 @@ class GurobiDecoder(BaseDecoder):
     def logical_from_error(self, errors: np.ndarray) -> np.ndarray:
         num_shots = errors.shape[0]
         observable_indices = self._observable_indices
-        max_observable_index = self._max_observable_index
-        logicals = np.zeros((num_shots, max_observable_index + 1))
+        logicals = np.zeros((num_shots, self._dem.num_observables))
         for i, error in enumerate(errors):
             for o, observable_index in enumerate(observable_indices):
                 if len(observable_index) > 0:

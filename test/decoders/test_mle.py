@@ -300,7 +300,7 @@ def test_multi_observable_dem():
 
 
 def test_repeat_block_dem():
-    """DEM with repeat block (non-DemInstruction) is handled (covers line 68)."""
+    """DEM with repeat block is flattened and decoded correctly."""
     dem = stim.DetectorErrorModel("""
         repeat 3 {
             error(0.1) D0 L0
@@ -308,3 +308,36 @@ def test_repeat_block_dem():
         """)
     decoder = GurobiDecoder(dem)
     assert decoder.num_detectors == 1
+    assert decoder.num_observables == 1
+    # The flattened DEM should have 3 error instructions, producing 3 weights
+    assert len(decoder.weights) == 3
+
+
+def test_repeat_block_decode_correctness():
+    """DEM with repeat block produces correct decode results after flattening."""
+    dem = stim.DetectorErrorModel("""
+        repeat 2 {
+            error(0.1) D0 D1 L0
+        }
+        error(0.1) D1 D2
+        """)
+    decoder = GurobiDecoder(dem)
+    assert decoder.num_detectors == 3
+    # Syndrome that triggers first error
+    det_shots = np.array([[1, 1, 0]], dtype=bool)
+    result = decoder.decode(det_shots)
+    assert result.shape == (1, 1)
+    assert result[0, 0]  # L0 should be flipped
+
+
+def test_nested_repeat_block_dem():
+    """Nested repeat blocks are fully flattened."""
+    dem = stim.DetectorErrorModel("""
+        repeat 2 {
+            repeat 3 {
+                error(0.1) D0 L0
+            }
+        }
+        """)
+    decoder = GurobiDecoder(dem)
+    assert len(decoder.weights) == 6
