@@ -1,18 +1,20 @@
 import math
 
+import stim
 import numpy as np
 import pytest
 import sinter
-import stim
 
-from bloqade.decoders import SinterTableDecoder, TableDecoder
-from bloqade.decoders._decoders.base import BaseDecoder
+from bloqade.decoders import TableDecoder, SinterTableDecoder
 from bloqade.decoders._decoders.mld import (
-    det_obs_shots_to_counts,
-    pack_boolean_array,
     shots_to_counts,
+    pack_boolean_array,
     unpack_boolean_array,
+    det_obs_shots_to_counts,
 )
+from bloqade.decoders._decoders.base import BaseDecoder
+
+from .conftest import pack_dets, simple_dem, unpack_obs, repetition_circuit
 
 
 def repetition_stim():
@@ -44,22 +46,14 @@ def test_is_base_decoder():
 
 
 def test_num_detectors():
-    dem = stim.DetectorErrorModel(
-        "error(0.1) D0 L0\nerror(0.1) D1 L0\n"
-    )
-    decoder = TableDecoder(
-        dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
+    decoder = TableDecoder(dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0]))
     assert decoder.num_detectors == 2
 
 
 def test_num_observables():
-    dem = stim.DetectorErrorModel(
-        "error(0.1) D0 L0\nerror(0.1) D1 L0\n"
-    )
-    decoder = TableDecoder(
-        dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
+    decoder = TableDecoder(dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0]))
     assert decoder.num_observables == 1
 
 
@@ -118,29 +112,19 @@ def test_mld_repetition():
 
 
 def test_decode_obs_det_counts():
-    dem = stim.DetectorErrorModel(
-        "error(0.1) D0 L0\nerror(0.1) D1 L0\n"
-    )
-    decoder = TableDecoder(
-        dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
+    decoder = TableDecoder(dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0]))
     assert np.array_equal(
         decoder.decode(np.array([[0, 0], [0, 1], [1, 0], [1, 1]])),
         np.array([[0], [1], [1], [0]]),
     )
     raw_det_obs_counts = np.arange(8)
-    decoded_det_obs_counts = decoder.decode_det_obs_counts(
-        raw_det_obs_counts
-    )
-    assert np.array_equal(
-        decoded_det_obs_counts, np.array([0, 5, 6, 3, 4, 1, 2, 7])
-    )
+    decoded_det_obs_counts = decoder.decode_det_obs_counts(raw_det_obs_counts)
+    assert np.array_equal(decoded_det_obs_counts, np.array([0, 5, 6, 3, 4, 1, 2, 7]))
 
 
 def test_from_det_obs_shots():
-    dem = stim.DetectorErrorModel(
-        "error(0.1) D0 L0\nerror(0.1) D1 L0\n"
-    )
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
     det_obs_shots = np.array(
         [
             [0, 0, 0],
@@ -184,35 +168,23 @@ def test_det_obs_dataframe():
 
 
 def test_no_error_syndrome():
-    dem = stim.DetectorErrorModel(
-        "error(0.1) D0 L0\nerror(0.1) D1 L0\n"
-    )
-    decoder = TableDecoder(
-        dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
+    decoder = TableDecoder(dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0]))
     result = decoder.decode(np.array([[0, 0]]))
     assert np.array_equal(result, np.array([[0]]))
 
 
 def test_all_detectors_fired():
-    dem = stim.DetectorErrorModel(
-        "error(0.1) D0 L0\nerror(0.1) D1 L0\n"
-    )
-    decoder = TableDecoder(
-        dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
+    decoder = TableDecoder(dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0]))
     result = decoder.decode(np.array([[1, 1]]))
     assert result.shape == (1, 1)
 
 
 def test_single_shot_decode():
     """Test _decode (single-shot) via the BaseDecoder interface."""
-    dem = stim.DetectorErrorModel(
-        "error(0.1) D0 L0\nerror(0.1) D1 L0\n"
-    )
-    decoder = TableDecoder(
-        dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
+    decoder = TableDecoder(dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0]))
     result = decoder.decode(np.array([0, 1], dtype=bool))
     assert result.ndim == 1
     assert np.array_equal(result, np.array([True]))
@@ -221,45 +193,10 @@ def test_single_shot_decode():
 # --- SinterTableDecoder tests ---
 
 
-def _simple_dem():
-    return stim.DetectorErrorModel(
-        """
-        error(0.1) D0 L0
-        error(0.1) D1 L0
-        """
-    )
-
-
-def _repetition_circuit():
-    return stim.Circuit(
-        """
-        R 0 1 2
-        X_ERROR(0.1) 0 1 2
-        MZZ 0 1
-        DETECTOR rec[-1]
-        MZZ 1 2
-        DETECTOR rec[-1]
-        M 0 1 2
-        OBSERVABLE_INCLUDE(0) rec[-1] rec[-2] rec[-3]
-    """
-    )
-
-
 def _repetition_dem():
-    return _repetition_circuit().detector_error_model(
+    return repetition_circuit().detector_error_model(
         decompose_errors=False, approximate_disjoint_errors=True
     )
-
-
-def _pack_dets(det_shots: np.ndarray) -> np.ndarray:
-    return np.packbits(
-        det_shots.astype(np.uint8), axis=1, bitorder="little"
-    )
-
-
-def _unpack_obs(packed_obs: np.ndarray, num_obs: int) -> np.ndarray:
-    unpacked = np.unpackbits(packed_obs, axis=1, bitorder="little")
-    return unpacked[:, :num_obs].astype(bool)
 
 
 def test_sinter_table_is_sinter_decoder():
@@ -268,7 +205,7 @@ def test_sinter_table_is_sinter_decoder():
 
 
 def test_sinter_table_compile_returns_compiled_decoder():
-    dem = _simple_dem()
+    dem = simple_dem()
     decoder = SinterTableDecoder()
     compiled = decoder.compile_decoder_for_dem(dem=dem)
     assert isinstance(compiled, sinter.CompiledDecoder)
@@ -280,7 +217,7 @@ def test_sinter_table_decode_shape_and_dtype():
     compiled = decoder.compile_decoder_for_dem(dem=dem)
 
     det_shots = np.array([[1, 0], [0, 1], [0, 0]], dtype=bool)
-    packed_dets = _pack_dets(det_shots)
+    packed_dets = pack_dets(det_shots)
 
     result = compiled.decode_shots_bit_packed(
         bit_packed_detection_event_data=packed_dets
@@ -296,32 +233,30 @@ def test_sinter_table_decode_correctness():
     decoder = SinterTableDecoder()
     compiled = decoder.compile_decoder_for_dem(dem=dem)
 
-    det_shots = np.array(
-        [[1, 0], [1, 1], [0, 1], [0, 0]], dtype=bool
-    )
-    packed_dets = _pack_dets(det_shots)
+    det_shots = np.array([[1, 0], [1, 1], [0, 1], [0, 0]], dtype=bool)
+    packed_dets = pack_dets(det_shots)
 
     result = compiled.decode_shots_bit_packed(
         bit_packed_detection_event_data=packed_dets
     )
-    obs_predictions = _unpack_obs(result, dem.num_observables)
+    obs_predictions = unpack_obs(result, dem.num_observables)
 
     expected = np.array([[True], [True], [True], [False]])
     assert np.array_equal(obs_predictions, expected)
 
 
 def test_sinter_table_no_error_syndrome():
-    dem = _simple_dem()
+    dem = simple_dem()
     decoder = SinterTableDecoder()
     compiled = decoder.compile_decoder_for_dem(dem=dem)
 
     det_shots = np.zeros((1, 2), dtype=bool)
-    packed_dets = _pack_dets(det_shots)
+    packed_dets = pack_dets(det_shots)
 
     result = compiled.decode_shots_bit_packed(
         bit_packed_detection_event_data=packed_dets
     )
-    obs_predictions = _unpack_obs(result, dem.num_observables)
+    obs_predictions = unpack_obs(result, dem.num_observables)
 
     assert np.array_equal(obs_predictions, np.array([[False]]))
 
@@ -338,7 +273,7 @@ def test_sinter_table_default_num_shots():
 
 @pytest.mark.slow
 def test_sinter_collect_table():
-    circuit = _repetition_circuit()
+    circuit = repetition_circuit()
     tasks = [
         sinter.Task(
             circuit=circuit,
@@ -349,9 +284,7 @@ def test_sinter_collect_table():
     stats = sinter.collect(
         num_workers=1,
         tasks=tasks,
-        custom_decoders={
-            "table_mld": SinterTableDecoder(num_shots=100000)
-        },
+        custom_decoders={"table_mld": SinterTableDecoder(num_shots=100000)},
         max_shots=100,
     )
     assert len(stats) == 1
