@@ -12,8 +12,7 @@ from .conftest import pack_dets, simple_dem, unpack_obs, repetition_circuit
 
 
 def regular_dem():
-    dem = stim.DetectorErrorModel(
-        """
+    dem = stim.DetectorErrorModel("""
         error(0.1) D9 D0 L0
         error(0.1) D0 D1
         error(0.1) D1 D2
@@ -24,8 +23,7 @@ def regular_dem():
         error(0.1) D6 D7
         error(0.1) D7 D8
         error(0.1) D8 D9
-        """
-    )
+        """)
     return dem
 
 
@@ -39,8 +37,7 @@ def regular_samples():
 
 
 def hypergraph_dem():
-    dem = stim.DetectorErrorModel(
-        """
+    dem = stim.DetectorErrorModel("""
         error(0.1) D9 D0 D1 L0
         error(0.1) D0 D1
         error(0.1) D1 D2
@@ -51,8 +48,7 @@ def hypergraph_dem():
         error(0.1) D6 D7
         error(0.1) D7 D8
         error(0.1) D8 D9
-        """
-    )
+        """)
     return dem
 
 
