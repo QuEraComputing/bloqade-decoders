@@ -155,33 +155,6 @@ def test_single_shot_decode():
     assert np.array_equal(result, np.array([True]))
 
 
-def test_logical_gap():
-    dem = regular_dem()
-    det_shots, _ = regular_samples()
-    decoder = GurobiDecoder(dem)
-    decoded_errors = decoder.decode_error(det_shots)
-    decoder.weight_from_error(decoded_errors)
-    decoded_logicals = decoder.logical_from_error(decoded_errors)
-
-    conditional_logicals = np.logical_not(decoded_logicals)
-    conditional_decoder = decoder.generate_conditional_decoder()
-    conditional_det_shots = np.concatenate([det_shots, conditional_logicals], axis=1)
-    flipped_errors = conditional_decoder.decode_error(conditional_det_shots)
-    flipped_weights = conditional_decoder.weight_from_error(flipped_errors)
-    flipped_logicals = conditional_decoder.logical_from_error(flipped_errors)
-    assert np.array_equal(flipped_logicals, conditional_logicals)
-    assert np.array_equal(flipped_weights, decoder.weight_from_error(flipped_errors))
-
-
-def test_conditional_decoder_has_extra_detector():
-    dem = regular_dem()
-    decoder = GurobiDecoder(dem)
-    conditional_decoder = decoder.generate_conditional_decoder()
-    assert (
-        len(conditional_decoder.detector_vertices) == len(decoder.detector_vertices) + 1
-    )
-
-
 # --- SinterGurobiDecoder tests ---
 
 

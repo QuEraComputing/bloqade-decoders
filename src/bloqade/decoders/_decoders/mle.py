@@ -160,17 +160,6 @@ class GurobiDecoder(BaseDecoder):
     def observable_indices(self) -> list[list[int]]:
         return self._observable_indices
 
-    def generate_conditional_decoder(
-        self, conditional_logicals: list[int] | None = None
-    ) -> GurobiDecoder:
-        if conditional_logicals is None:
-            conditional_logicals = list(range(self._dem.num_observables))
-        conditional_decoder = GurobiDecoder(self._dem)
-        for logical_idx in conditional_logicals:
-            es = conditional_decoder._observable_indices[logical_idx]
-            conditional_decoder._detector_vertices.append(es.copy())
-        return conditional_decoder
-
     def weight_from_error(self, error: np.ndarray) -> np.ndarray:
         return np.sum(error * self._weights, axis=1)
 
