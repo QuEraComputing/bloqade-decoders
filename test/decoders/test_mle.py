@@ -12,8 +12,7 @@ from .conftest import pack_dets, simple_dem, unpack_obs, repetition_circuit
 
 
 def regular_dem():
-    dem = stim.DetectorErrorModel(
-        """
+    dem = stim.DetectorErrorModel("""
         error(0.1) D9 D0 L0
         error(0.1) D0 D1
         error(0.1) D1 D2
@@ -24,8 +23,7 @@ def regular_dem():
         error(0.1) D6 D7
         error(0.1) D7 D8
         error(0.1) D8 D9
-        """
-    )
+        """)
     return dem
 
 
@@ -39,8 +37,7 @@ def regular_samples():
 
 
 def hypergraph_dem():
-    dem = stim.DetectorErrorModel(
-        """
+    dem = stim.DetectorErrorModel("""
         error(0.1) D9 D0 D1 L0
         error(0.1) D0 D1
         error(0.1) D1 D2
@@ -51,8 +48,7 @@ def hypergraph_dem():
         error(0.1) D6 D7
         error(0.1) D7 D8
         error(0.1) D8 D9
-        """
-    )
+        """)
     return dem
 
 
@@ -255,23 +251,19 @@ def test_single_shot_decode_with_weights():
 
 def test_separator_targets_rejected():
     """DEM with separator targets raises ValueError (covers line 124)."""
-    dem = stim.DetectorErrorModel(
-        """
+    dem = stim.DetectorErrorModel("""
         error(0.1) D0 ^ D1 L0
-        """
-    )
+        """)
     with pytest.raises(ValueError, match="separator"):
         GurobiDecoder(dem)
 
 
 def test_multi_observable_dem():
     """DEM with multiple observables covers max_observable_index update (line 82)."""
-    dem = stim.DetectorErrorModel(
-        """
+    dem = stim.DetectorErrorModel("""
         error(0.1) D0 L0
         error(0.1) D1 L1
-        """
-    )
+        """)
     decoder = GurobiDecoder(dem)
     assert decoder.max_observable_index == 1
     assert decoder.num_observables == 2
@@ -282,13 +274,11 @@ def test_multi_observable_dem():
 
 def test_repeat_block_dem():
     """DEM with repeat block is flattened and decoded correctly."""
-    dem = stim.DetectorErrorModel(
-        """
+    dem = stim.DetectorErrorModel("""
         repeat 3 {
             error(0.1) D0 L0
         }
-        """
-    )
+        """)
     decoder = GurobiDecoder(dem)
     assert decoder.num_detectors == 1
     assert decoder.num_observables == 1
@@ -298,14 +288,12 @@ def test_repeat_block_dem():
 
 def test_repeat_block_decode_correctness():
     """DEM with repeat block produces correct decode results after flattening."""
-    dem = stim.DetectorErrorModel(
-        """
+    dem = stim.DetectorErrorModel("""
         repeat 2 {
             error(0.1) D0 D1 L0
         }
         error(0.1) D1 D2
-        """
-    )
+        """)
     decoder = GurobiDecoder(dem)
     assert decoder.num_detectors == 3
     # Syndrome that triggers first error
@@ -317,14 +305,12 @@ def test_repeat_block_decode_correctness():
 
 def test_nested_repeat_block_dem():
     """Nested repeat blocks are fully flattened."""
-    dem = stim.DetectorErrorModel(
-        """
+    dem = stim.DetectorErrorModel("""
         repeat 2 {
             repeat 3 {
                 error(0.1) D0 L0
             }
         }
-        """
-    )
+        """)
     decoder = GurobiDecoder(dem)
     assert len(decoder.weights) == 6

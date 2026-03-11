@@ -18,8 +18,7 @@ from .conftest import pack_dets, simple_dem, unpack_obs, repetition_circuit
 
 
 def repetition_stim():
-    circ = stim.Circuit(
-        """
+    circ = stim.Circuit("""
         R 0 1 2
         X_ERROR(0.1) 0 1 2
         MZZ 0 1
@@ -28,8 +27,7 @@ def repetition_stim():
         DETECTOR rec[-1]
         M 0 1 2
         OBSERVABLE_INCLUDE(0) rec[-1] rec[-2] rec[-3]
-    """
-    )
+    """)
     return circ
 
 
