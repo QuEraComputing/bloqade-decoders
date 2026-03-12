@@ -314,3 +314,22 @@ def test_nested_repeat_block_dem():
         """)
     decoder = GurobiDecoder(dem)
     assert len(decoder.weights) == 6
+
+
+def test_observable_indices_align_with_weights():
+    """observable_indices must reference weight-list indices, not raw DEM positions.
+
+    A DEM with detector coordinate annotations has non-error DemInstructions mixed
+    in. A naive enumerate()-based counter would increment for those instructions,
+    causing observable_indices to reference wrong (out-of-bounds) weight indices.
+    """
+    dem = stim.DetectorErrorModel("""
+        detector(0, 0) D0
+        detector(1, 0) D1
+        error(0.1) D0 L0
+        error(0.1) D0 D1
+        """)
+    decoder = GurobiDecoder(dem)
+    assert len(decoder.weights) == 2
+    # The first (and only) observable-flipping error is at weight index 0
+    assert decoder.observable_indices[0] == [0]
