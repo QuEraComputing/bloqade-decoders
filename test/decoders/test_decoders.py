@@ -5,6 +5,7 @@ from bloqade.decoders import (
     MWPFDecoder,
     BpLsdDecoder,
     BpOsdDecoder,
+    GurobiDecoder,
     TesseractDecoder,
     BeliefFindDecoder,
 )
@@ -23,12 +24,15 @@ from .two_logical_ref import (
     two_logical_expected_decoded_obs,
 )
 
+# TableDecoder is excluded: it requires a det_obs_counts argument
+# and cannot be constructed from a DEM alone.
 DECODERS = [
     TesseractDecoder,
     BeliefFindDecoder,
     BpLsdDecoder,
     BpOsdDecoder,
     MWPFDecoder,
+    GurobiDecoder,
 ]
 
 TEST_CASES = [

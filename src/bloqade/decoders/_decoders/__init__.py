@@ -1,3 +1,11 @@
+from .mld import (
+    TableDecoder as TableDecoder,
+    SinterTableDecoder as SinterTableDecoder,
+)
+from .mle import (
+    GurobiDecoder as GurobiDecoder,
+    SinterGurobiDecoder as SinterGurobiDecoder,
+)
 from .base import BaseDecoder as BaseDecoder
 from .ldpc import (
     BpLsdDecoder as BpLsdDecoder,
