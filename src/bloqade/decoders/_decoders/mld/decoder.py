@@ -6,20 +6,10 @@ import stim
 import numpy as np
 import numpy.typing as npt
 
-from .base import BaseDecoder
-
-try:
-    from sinter import (
-        Decoder as _SinterDecoder,
-        CompiledDecoder as _SinterCompiledDecoder,
-    )
-except ImportError:
-    _SinterCompiledDecoder = object  # type: ignore[assignment,misc]
-    _SinterDecoder = object  # type: ignore[assignment,misc]
+from ..base import BaseDecoder
+from .utils import shots_to_counts, pack_boolean_array, unpack_boolean_array
 
 logger = logging.getLogger(__name__)
-
-STEP_SIZE = 65536
 
 
 class TableDecoder(BaseDecoder):
@@ -69,24 +59,13 @@ class TableDecoder(BaseDecoder):
     def num_observables(self) -> int:
         return self._dem.num_observables
 
-    @property
-    def det_obs_counts(self) -> np.ndarray:
-        return self._det_obs_counts
-
-    @property
-    def is_cached_correction(self) -> bool:
-        return self._is_cached_correction
-
-    @property
-    def is_cached_df(self) -> bool:
-        return self._is_cached_df
-
     @classmethod
     def from_stim_circuit(
         cls,
         circuit: stim.Circuit,
         num_shots: int = 10**8,
         seed: int | None = None,
+        step_size: int = 65536,
     ) -> TableDecoder:
         """Build a TableDecoder by sampling a stim circuit.
 
@@ -94,6 +73,7 @@ class TableDecoder(BaseDecoder):
             circuit: The stim circuit to sample from.
             num_shots: Number of shots to sample.
             seed: Optional random seed.
+            step_size: Number of shots per sampling batch.
 
         Returns:
             A TableDecoder with counts from the sampled shots.
@@ -124,7 +104,6 @@ class TableDecoder(BaseDecoder):
 
         decoder = cls(dem=dem, det_obs_counts=det_obs_counts)
 
-        step_size = STEP_SIZE
         progress_bar_steps = ((num_shots - 1) // step_size) + 1
         total_sampled = 0
 
@@ -278,82 +257,3 @@ class TableDecoder(BaseDecoder):
         corrected_labels = labels ^ repeated_appended_correction
         decoded_det_obs_counts = raw_det_obs_counts[corrected_labels.reshape(-1)]
         return decoded_det_obs_counts
-
-
-def pack_boolean_array(arr: np.ndarray) -> np.ndarray:
-    """Pack a boolean array into int64 (each row becomes one int)."""
-    data_len = arr.shape[1]
-    return np.sum(arr << np.arange(data_len), axis=1)  # type: ignore[arg-type]
-
-
-def unpack_boolean_array(arr: np.ndarray, data_len: int) -> np.ndarray:
-    """Unpack int64 array back to boolean array."""
-    return (arr.reshape(-1, 1) & (1 << np.arange(data_len))) > 0
-
-
-def shots_to_counts(shots: np.ndarray) -> np.ndarray:
-    """Convert boolean shots array to histogram of counts."""
-    packed_shots = pack_boolean_array(shots)
-    counts = np.bincount(packed_shots, minlength=2 ** shots.shape[1])
-    return counts
-
-
-def det_obs_shots_to_counts(det_shots: np.ndarray, obs_shots: np.ndarray) -> np.ndarray:
-    """Convert detector and observable shots into combined counts."""
-    shots = np.concatenate([det_shots, obs_shots], axis=1)
-    counts = shots_to_counts(shots)
-    return counts
-
-
-class _CompiledTableDecoder(_SinterCompiledDecoder):  # type: ignore[misc]
-    """Compiled decoder wrapping TableDecoder for sinter."""
-
-    def __init__(self, decoder: TableDecoder) -> None:
-        self._decoder = decoder
-
-    def decode_shots_bit_packed(
-        self,
-        *,
-        bit_packed_detection_event_data: np.ndarray,
-    ) -> np.ndarray:
-        num_dets = self._decoder.num_detectors
-        det_shots = np.unpackbits(
-            bit_packed_detection_event_data,
-            axis=1,
-            bitorder="little",
-        )[:, :num_dets].astype(bool)
-        obs_predictions = self._decoder.decode(det_shots)
-        return np.packbits(
-            obs_predictions.astype(np.uint8),
-            axis=1,
-            bitorder="little",
-        )
-
-
-class SinterTableDecoder(_SinterDecoder):  # type: ignore[misc]
-    """Sinter-compatible adapter for the TableDecoder (MLD).
-
-    Samples from the DEM (not a circuit) to build the lookup table,
-    since sinter only provides a DEM in compile_decoder_for_dem. This
-    is equivalent to circuit sampling when the DEM faithfully represents
-    all error mechanisms.
-
-    Args:
-        num_shots: Number of shots to sample for building the table.
-    """
-
-    num_shots: int
-
-    def __init__(self, num_shots: int = 2**26) -> None:
-        self.num_shots = num_shots
-
-    def compile_decoder_for_dem(
-        self,
-        *,
-        dem: stim.DetectorErrorModel,
-    ) -> _SinterCompiledDecoder:
-        sampler = dem.compile_sampler()
-        det_data, obs_data, _ = sampler.sample(self.num_shots)
-        det_obs_shots = np.concatenate([det_data, obs_data], axis=1)
-        decoder = TableDecoder.from_det_obs_shots(dem, det_obs_shots)
-        return _CompiledTableDecoder(decoder)

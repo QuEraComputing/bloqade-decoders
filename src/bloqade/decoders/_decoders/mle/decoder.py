@@ -1,22 +1,13 @@
 from __future__ import annotations
 
-from typing import Literal, ClassVar, cast, overload
+from typing import ClassVar, cast
 
 import stim
 import numpy as np
 import numpy.typing as npt
 from stim import DemInstruction
 
-from .base import BaseDecoder
-
-try:
-    from sinter import (
-        Decoder as _SinterDecoder,
-        CompiledDecoder as _SinterCompiledDecoder,
-    )
-except ImportError:
-    _SinterCompiledDecoder = object  # type: ignore[assignment,misc]
-    _SinterDecoder = object  # type: ignore[assignment,misc]
+from ..base import BaseDecoder
 
 
 class GurobiDecoder(BaseDecoder):
@@ -34,14 +25,6 @@ class GurobiDecoder(BaseDecoder):
 
     _env: ClassVar[object | None] = None
 
-    @classmethod
-    def _get_env(cls) -> object:
-        if cls._env is None:
-            import gurobipy as gp
-
-            cls._env = gp.Env()
-        return cls._env
-
     def __init__(self, dem: stim.DetectorErrorModel) -> None:
         try:
             import gurobipy  # noqa: F401
@@ -56,7 +39,7 @@ class GurobiDecoder(BaseDecoder):
         except ImportError as e:
             raise ImportError(
                 "The scipy package is required for GurobiDecoder. "
-                'You can install it via: pip install "bloqade-decoders[mle]"'
+                'You can install it via: pip install "scipy"'
             ) from e
 
         super().__init__(dem)
@@ -117,7 +100,6 @@ class GurobiDecoder(BaseDecoder):
         self._detector_vertices = detector_vertices
         self._weights = weights
         self._observable_indices = observable_indices
-        self._max_observable_index = max_observable_index
 
     @staticmethod
     def _check_no_separators(dem: stim.DetectorErrorModel) -> None:
@@ -144,22 +126,6 @@ class GurobiDecoder(BaseDecoder):
     def num_observables(self) -> int:
         return self._dem.num_observables
 
-    @property
-    def max_observable_index(self) -> int:
-        return self._max_observable_index
-
-    @property
-    def detector_vertices(self) -> list[list[int]]:
-        return self._detector_vertices
-
-    @property
-    def weights(self) -> list[float]:
-        return self._weights
-
-    @property
-    def observable_indices(self) -> list[list[int]]:
-        return self._observable_indices
-
     def weight_from_error(self, error: np.ndarray) -> np.ndarray:
         return np.sum(error * self._weights, axis=1)
 
@@ -170,7 +136,10 @@ class GurobiDecoder(BaseDecoder):
         num_shots = det_shots.shape[0]
         num_errors = len(self._weights)
         errors = np.zeros([num_shots, num_errors], dtype=bool)
-        env = GurobiDecoder._get_env()
+
+        if GurobiDecoder._env is None:
+            GurobiDecoder._env = gp.Env()
+        env = GurobiDecoder._env
         env.setParam("OutputFlag", 1 if verbose else 0)  # type: ignore[union-attr]
 
         weights = self._weights
@@ -183,22 +152,22 @@ class GurobiDecoder(BaseDecoder):
             detector_variables: list[gp.Var] = []
             objective: gp.LinExpr = gp.LinExpr(0)
 
-            for i in range(len(weights)):
+            for i, w in enumerate(weights):
                 error_variables.append(m.addVar(vtype=GRB.BINARY, name="e" + str(i)))
-                objective += weights[i] * error_variables[i]
+                objective += w * error_variables[i]
             m.setObjective(objective, GRB.MAXIMIZE)
 
-            for i in range(len(detector_vertices)):
+            for i, dv in enumerate(detector_vertices):
                 detector_variables.append(
                     m.addVar(
                         vtype=GRB.INTEGER,
                         name="h" + str(i),
-                        ub=len(detector_vertices[i]),
+                        ub=len(dv),
                         lb=0,
                     )
                 )
                 constraint: gp.LinExpr = gp.LinExpr(0)
-                for j in detector_vertices[i]:
+                for j in dv:
                     constraint += error_variables[j]
                 constraint -= 2 * detector_variables[i]
                 m.addConstr(constraint == detector_shot[i], name="c" + str(i))
@@ -237,23 +206,6 @@ class GurobiDecoder(BaseDecoder):
         obs = self.logical_from_error(errors)
         return obs[0].astype(np.bool_)
 
-    @overload
-    def decode(
-        self,
-        detector_bits: npt.NDArray[np.bool_],
-        verbose: bool = ...,
-        return_weights: Literal[False] = ...,
-    ) -> npt.NDArray[np.bool_]: ...
-
-    @overload
-    def decode(
-        self,
-        detector_bits: npt.NDArray[np.bool_],
-        verbose: bool = ...,
-        *,
-        return_weights: Literal[True],
-    ) -> tuple[npt.NDArray[np.bool_], np.ndarray]: ...
-
     def decode(
         self,
         detector_bits: npt.NDArray[np.bool_],
@@ -282,41 +234,3 @@ class GurobiDecoder(BaseDecoder):
         if return_weights:
             return decoded_obs, self.weight_from_error(decoded_errors)
         return decoded_obs
-
-
-class _CompiledGurobiDecoder(_SinterCompiledDecoder):  # type: ignore[misc]
-    """Compiled decoder wrapping GurobiDecoder for sinter."""
-
-    def __init__(self, decoder: GurobiDecoder) -> None:
-        self._decoder = decoder
-
-    def decode_shots_bit_packed(
-        self,
-        *,
-        bit_packed_detection_event_data: np.ndarray,
-    ) -> np.ndarray:
-        num_dets = self._decoder.num_detectors
-        det_shots = np.unpackbits(
-            bit_packed_detection_event_data,
-            axis=1,
-            bitorder="little",
-        )[:, :num_dets].astype(bool)
-        obs_predictions = self._decoder.decode(det_shots)
-        assert isinstance(obs_predictions, np.ndarray)
-        return np.packbits(
-            obs_predictions.astype(np.uint8),
-            axis=1,
-            bitorder="little",
-        )
-
-
-class SinterGurobiDecoder(_SinterDecoder):  # type: ignore[misc]
-    """Sinter-compatible adapter for the GurobiDecoder (MLE)."""
-
-    def compile_decoder_for_dem(
-        self,
-        *,
-        dem: stim.DetectorErrorModel,
-    ) -> _SinterCompiledDecoder:
-        decoder = GurobiDecoder(dem)
-        return _CompiledGurobiDecoder(decoder)
