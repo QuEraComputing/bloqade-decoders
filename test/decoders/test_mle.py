@@ -269,3 +269,33 @@ def test_observable_indices_align_with_weights():
     result = decoder.decode(det_shots)
     assert result.shape == (1, 1)
     assert result[0, 0]  # L0 should be flipped
+
+
+def test_prob_zero_error_skipped():
+    """error(0.0) is silently dropped and does not affect decoding."""
+    dem = stim.DetectorErrorModel("""
+        error(0.1) D0 D1 L0
+        error(0.0) D1 D2 L0
+        error(0.05) D0 D2
+        """)
+    decoder = GurobiDecoder(dem)
+    # Syndrome [0, 1, 1] matches D1 D2 which is only the prob=0 error.
+    # Since that error is dropped, the solver sees it as noise.
+    result = decoder.decode(np.array([[0, 1, 1]], dtype=bool))
+    assert result.shape == (1, 1)
+
+
+def test_prob_one_error_pre_applied():
+    """error(1.0) always fires and is pre-applied to the syndrome."""
+    dem = stim.DetectorErrorModel("""
+        error(0.1) D0 D1 L0
+        error(1.0) D1 D2 L0
+        error(0.05) D0 D2
+        """)
+    decoder = GurobiDecoder(dem)
+    # The certain error flips D1 and D2, so syndrome [0,1,1] after
+    # pre-application becomes [0,0,0] (no errors to solve for).
+    result = decoder.decode(np.array([[0, 1, 1]], dtype=bool))
+    assert result.shape == (1, 1)
+    # The certain error flips L0, so the observable should be True
+    assert result[0, 0]

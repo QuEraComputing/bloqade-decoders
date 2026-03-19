@@ -54,25 +54,40 @@ class GurobiDecoder(BaseDecoder):
         hyperedge_dets: list[list[int]] = []
         hyperedge_obs: list[list[int]] = []
 
+        # Track errors with probability 1.0 (always fire)
+        certain_det_flip = np.zeros(dem.num_detectors, dtype=int)
+        certain_obs_flip = np.zeros(dem.num_observables, dtype=int)
+
         for instruction in self._dem:  # type: ignore[union-attr]
             if not isinstance(instruction, DemInstruction):
                 raise Exception(
                     "The detector-error model should be already flattened. But still got DemRepeatBlock."
                 )
-            if instruction.type == "error" and instruction.args_copy()[0] != 0:
-                probability = instruction.args_copy()[0]
-                weights.append(np.log(probability / (1 - probability)))
+            if instruction.type != "error":
+                continue
+            probability = instruction.args_copy()[0]
+            if probability == 0:
+                continue
 
-                det_targets: list[int] = []
-                obs_targets: list[int] = []
-                for t in instruction.targets_copy():
-                    target = cast(stim.DemTarget, t)
-                    if stim.DemTarget.is_relative_detector_id(target):
-                        det_targets.append(target.val)
-                    else:
-                        obs_targets.append(target.val)
-                        if target.val > max_observable_index:
-                            max_observable_index = target.val
+            det_targets: list[int] = []
+            obs_targets: list[int] = []
+            for t in instruction.targets_copy():
+                target = cast(stim.DemTarget, t)
+                if stim.DemTarget.is_relative_detector_id(target):
+                    det_targets.append(target.val)
+                else:
+                    obs_targets.append(target.val)
+                    if target.val > max_observable_index:
+                        max_observable_index = target.val
+
+            if probability == 1:
+                # Certain errors always fire: pre-apply their contributions
+                for d in det_targets:
+                    certain_det_flip[d] ^= 1
+                for o in obs_targets:
+                    certain_obs_flip[o] ^= 1
+            else:
+                weights.append(np.log(probability / (1 - probability)))
                 hyperedge_dets.append(det_targets)
                 hyperedge_obs.append(obs_targets)
 
@@ -100,6 +115,8 @@ class GurobiDecoder(BaseDecoder):
         self._detector_vertices = detector_vertices
         self._weights = weights
         self._observable_indices = observable_indices
+        self._certain_det_flip = certain_det_flip
+        self._certain_obs_flip = certain_obs_flip
 
     @staticmethod
     def _check_no_separators(dem: stim.DetectorErrorModel) -> None:
@@ -144,7 +161,8 @@ class GurobiDecoder(BaseDecoder):
 
         weights = self._weights
         detector_vertices = self._detector_vertices
-        det_shots = det_shots.astype(int)
+        # Pre-apply certain errors (prob=1.0) to the syndrome
+        det_shots = det_shots.astype(int) ^ self._certain_det_flip
 
         for d, detector_shot in enumerate(det_shots):
             m = gp.Model("mip1", env=env)
@@ -190,7 +208,8 @@ class GurobiDecoder(BaseDecoder):
     def logical_from_error(self, errors: np.ndarray) -> np.ndarray:
         num_shots = errors.shape[0]
         observable_indices = self._observable_indices
-        logicals = np.zeros((num_shots, self._dem.num_observables))
+        # Start from certain error contributions (prob=1.0 errors always fire)
+        logicals = np.tile(self._certain_obs_flip, (num_shots, 1)).astype(float)
         for i, error in enumerate(errors):
             for o, observable_index in enumerate(observable_indices):
                 if len(observable_index) > 0:
