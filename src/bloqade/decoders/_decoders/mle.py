@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, ClassVar, cast, overload
+from typing import Literal, ClassVar, NamedTuple, cast, overload
 
 import stim
 import numpy as np
@@ -163,60 +163,161 @@ class GurobiDecoder(BaseDecoder):
     def weight_from_error(self, error: np.ndarray) -> np.ndarray:
         return np.sum(error * self._weights, axis=1)
 
-    def decode_error(self, det_shots: np.ndarray, verbose: bool = False) -> np.ndarray:
+    class _SolveResult(NamedTuple):
+        error: np.ndarray
+        logical: np.ndarray
+        objective: float
+
+    def _solve_single_shot(
+        self,
+        detector_shot: np.ndarray,
+        *,
+        verbose: bool = False,
+        forbidden_logical: np.ndarray | None = None,
+    ) -> _SolveResult | None:
         import gurobipy as gp
         from gurobipy import GRB
 
-        num_shots = det_shots.shape[0]
-        num_errors = len(self._weights)
-        errors = np.zeros([num_shots, num_errors], dtype=bool)
         env = GurobiDecoder._get_env()
         env.setParam("OutputFlag", 1 if verbose else 0)  # type: ignore[union-attr]
 
+        m = gp.Model("mip1", env=env)
         weights = self._weights
         detector_vertices = self._detector_vertices
-        det_shots = det_shots.astype(int)
+        observable_indices = self._observable_indices
 
-        for d, detector_shot in enumerate(det_shots):
-            m = gp.Model("mip1", env=env)
-            error_variables: list[gp.Var] = []
-            detector_variables: list[gp.Var] = []
-            objective: gp.LinExpr = gp.LinExpr(0)
+        error_variables: list[gp.Var] = []
+        detector_variables: list[gp.Var] = []
+        logical_variables: list[gp.Var] = []
+        objective: gp.LinExpr = gp.LinExpr(0)
 
-            for i in range(len(weights)):
-                error_variables.append(m.addVar(vtype=GRB.BINARY, name="e" + str(i)))
-                objective += weights[i] * error_variables[i]
-            m.setObjective(objective, GRB.MAXIMIZE)
+        for i, weight in enumerate(weights):
+            error_variables.append(m.addVar(vtype=GRB.BINARY, name="e" + str(i)))
+            objective += weight * error_variables[i]
+        m.setObjective(objective, GRB.MAXIMIZE)
 
-            for i in range(len(detector_vertices)):
-                detector_variables.append(
-                    m.addVar(
-                        vtype=GRB.INTEGER,
-                        name="h" + str(i),
-                        ub=len(detector_vertices[i]),
-                        lb=0,
+        for i, detector_vertex in enumerate(detector_vertices):
+            detector_variables.append(
+                m.addVar(
+                    vtype=GRB.INTEGER,
+                    name="h" + str(i),
+                    ub=len(detector_vertex),
+                    lb=0,
+                )
+            )
+            constraint: gp.LinExpr = gp.LinExpr(0)
+            for j in detector_vertex:
+                constraint += error_variables[j]
+            constraint -= 2 * detector_variables[i]
+            m.addConstr(constraint == int(detector_shot[i]), name="c" + str(i))
+
+        for obs_idx, observable_index in enumerate(observable_indices):
+            logical_var = m.addVar(vtype=GRB.BINARY, name="l" + str(obs_idx))
+            logical_variables.append(logical_var)
+            if len(observable_index) == 0:
+                m.addConstr(logical_var == 0, name="lfix" + str(obs_idx))
+                continue
+            slack_var = m.addVar(
+                vtype=GRB.INTEGER,
+                lb=0,
+                ub=len(observable_index),
+                name="u" + str(obs_idx),
+            )
+            constraint = gp.LinExpr(0)
+            for j in observable_index:
+                constraint += error_variables[j]
+            constraint -= 2 * slack_var
+            m.addConstr(constraint == logical_var, name="lpar" + str(obs_idx))
+
+        if forbidden_logical is not None:
+            diff_variables: list[gp.Var] = []
+            for obs_idx, forbidden_bit in enumerate(forbidden_logical.astype(int)):
+                diff_var = m.addVar(vtype=GRB.BINARY, name="d" + str(obs_idx))
+                diff_variables.append(diff_var)
+                if forbidden_bit:
+                    m.addConstr(
+                        diff_var + logical_variables[obs_idx] == 1,
+                        name="ddiff" + str(obs_idx),
                     )
-                )
-                constraint: gp.LinExpr = gp.LinExpr(0)
-                for j in detector_vertices[i]:
-                    constraint += error_variables[j]
-                constraint -= 2 * detector_variables[i]
-                m.addConstr(constraint == detector_shot[i], name="c" + str(i))
+                else:
+                    m.addConstr(
+                        diff_var == logical_variables[obs_idx],
+                        name="ddiff" + str(obs_idx),
+                    )
+            m.addConstr(gp.quicksum(diff_variables) >= 1, name="logical_difference")
 
-            m.optimize()
-            if m.status != GRB.OPTIMAL:
-                if verbose:
-                    print("Did not find optimal solution", m.status)
-                m.close()
-                raise RuntimeError(
-                    f"Gurobi did not find an optimal solution. Status: {m.status}"
-                )
-            error = np.round(
-                np.array([e.X for e in error_variables]), decimals=0
-            ).astype(bool)
-            errors[d, :] = error
+        m.optimize()
+        if m.status == GRB.INFEASIBLE and forbidden_logical is not None:
             m.close()
+            return None
+        if m.status != GRB.OPTIMAL:
+            if verbose:
+                print("Did not find optimal solution", m.status)
+            m.close()
+            raise RuntimeError(
+                f"Gurobi did not find an optimal solution. Status: {m.status}"
+            )
+
+        error = np.round(
+            np.array([var.X for var in error_variables]), decimals=0
+        ).astype(bool)
+        logical = np.round(
+            np.array([var.X for var in logical_variables]), decimals=0
+        ).astype(bool)
+        objective_value = float(m.ObjVal)
+        m.close()
+        return self._SolveResult(
+            error=error,
+            logical=logical,
+            objective=objective_value,
+        )
+
+    def decode_error(self, det_shots: np.ndarray, verbose: bool = False) -> np.ndarray:
+        num_shots = det_shots.shape[0]
+        num_errors = len(self._weights)
+        errors = np.zeros([num_shots, num_errors], dtype=bool)
+        for d, detector_shot in enumerate(det_shots.astype(int)):
+            result = self._solve_single_shot(detector_shot, verbose=verbose)
+            assert result is not None
+            errors[d, :] = result.error
         return errors
+
+    def decode_with_logical_gap(
+        self,
+        detector_bits: npt.NDArray[np.bool_],
+        verbose: bool = False,
+    ) -> tuple[npt.NDArray[np.bool_], np.ndarray]:
+        """Decode detector bits and return the logical-gap confidence score.
+
+        The logical gap is the objective-value difference between the most
+        likely error and the best competing error that implies a different
+        logical correction. Larger values indicate higher confidence.
+        """
+        single_shot = detector_bits.ndim == 1
+        det_shots = detector_bits.reshape(1, -1) if single_shot else detector_bits
+
+        decoded_obs = np.zeros(
+            (det_shots.shape[0], self.num_observables),
+            dtype=np.bool_,
+        )
+        logical_gaps = np.zeros(det_shots.shape[0], dtype=float)
+
+        for shot_idx, detector_shot in enumerate(det_shots.astype(int)):
+            best = self._solve_single_shot(detector_shot, verbose=verbose)
+            assert best is not None
+            second = self._solve_single_shot(
+                detector_shot,
+                verbose=verbose,
+                forbidden_logical=best.logical,
+            )
+            decoded_obs[shot_idx] = best.logical
+            logical_gaps[shot_idx] = (
+                np.inf if second is None else best.objective - second.objective
+            )
+
+        if single_shot:
+            return decoded_obs[0], logical_gaps
+        return decoded_obs, logical_gaps
 
     def logical_from_error(self, errors: np.ndarray) -> np.ndarray:
         num_shots = errors.shape[0]
@@ -243,6 +344,7 @@ class GurobiDecoder(BaseDecoder):
         detector_bits: npt.NDArray[np.bool_],
         verbose: bool = ...,
         return_weights: Literal[False] = ...,
+        return_logical_gap: Literal[False] = ...,
     ) -> npt.NDArray[np.bool_]: ...
 
     @overload
@@ -252,24 +354,69 @@ class GurobiDecoder(BaseDecoder):
         verbose: bool = ...,
         *,
         return_weights: Literal[True],
+        return_logical_gap: Literal[False] = ...,
     ) -> tuple[npt.NDArray[np.bool_], np.ndarray]: ...
+
+    @overload
+    def decode(
+        self,
+        detector_bits: npt.NDArray[np.bool_],
+        verbose: bool = ...,
+        *,
+        return_weights: Literal[False] = ...,
+        return_logical_gap: Literal[True],
+    ) -> tuple[npt.NDArray[np.bool_], np.ndarray]: ...
+
+    @overload
+    def decode(
+        self,
+        detector_bits: npt.NDArray[np.bool_],
+        verbose: bool = ...,
+        *,
+        return_weights: Literal[True],
+        return_logical_gap: Literal[True],
+    ) -> tuple[npt.NDArray[np.bool_], np.ndarray, np.ndarray]: ...
 
     def decode(
         self,
         detector_bits: npt.NDArray[np.bool_],
         verbose: bool = False,
         return_weights: bool = False,
-    ) -> npt.NDArray[np.bool_] | tuple[npt.NDArray[np.bool_], np.ndarray]:
+        return_logical_gap: bool = False,
+    ) -> (
+        npt.NDArray[np.bool_]
+        | tuple[npt.NDArray[np.bool_], np.ndarray]
+        | tuple[npt.NDArray[np.bool_], np.ndarray, np.ndarray]
+    ):
         """Decode detector bits, optionally returning weights.
 
         Args:
             detector_bits: 1D (single shot) or 2D (batch) boolean array.
             verbose: If True, print Gurobi solver output.
             return_weights: If True, return (observable_corrections, weights).
+            return_logical_gap: If True, also return logical-gap confidence.
 
         Returns:
-            Observable corrections, or (corrections, weights) tuple.
+            Observable corrections, or tuples with weights and/or logical gaps.
         """
+        if return_logical_gap:
+            decoded_obs, logical_gaps = self.decode_with_logical_gap(
+                detector_bits,
+                verbose=verbose,
+            )
+            if return_weights:
+                decoded_errors = self.decode_error(
+                    (
+                        detector_bits.reshape(1, -1)
+                        if detector_bits.ndim == 1
+                        else detector_bits
+                    ),
+                    verbose,
+                )
+                weights = self.weight_from_error(decoded_errors)
+                return decoded_obs, weights, logical_gaps
+            return decoded_obs, logical_gaps
+
         if detector_bits.ndim == 1:
             det_2d = detector_bits.reshape(1, -1)
             errors = self.decode_error(det_2d, verbose)

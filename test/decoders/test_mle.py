@@ -61,6 +61,14 @@ def hyper_samples():
     return det_shots, obs_shots
 
 
+def confidence_dem():
+    dem = stim.DetectorErrorModel("""
+        error(0.1) D0 L0
+        error(0.2) D0
+        """)
+    return dem
+
+
 def test_is_base_decoder():
     dem = regular_dem()
     decoder = GurobiDecoder(dem)
@@ -103,6 +111,41 @@ def test_decode_returns_weights():
     assert obs.shape == (2, 1)
     assert weights.shape == (2,)
     assert np.all(weights < 0)
+
+
+def test_decode_returns_logical_gap():
+    dem = confidence_dem()
+    det_shots = np.array([[1]], dtype=bool)
+    decoder = GurobiDecoder(dem)
+    obs, logical_gap = decoder.decode(det_shots, return_logical_gap=True)
+    expected_gap = math.log(0.2 / 0.8) - math.log(0.1 / 0.9)
+    assert obs.shape == (1, 1)
+    assert np.array_equal(obs, np.array([[False]]))
+    assert logical_gap.shape == (1,)
+    assert np.isclose(logical_gap[0], expected_gap)
+
+
+def test_decode_returns_infinite_logical_gap_when_no_alternative_logical_exists():
+    dem = simple_dem()
+    det_shots = np.array([[1, 0]], dtype=bool)
+    decoder = GurobiDecoder(dem)
+    obs, logical_gap = decoder.decode(det_shots, return_logical_gap=True)
+    assert np.array_equal(obs, np.array([[True]]))
+    assert np.isinf(logical_gap[0])
+
+
+def test_decode_returns_weights_and_logical_gap():
+    dem = confidence_dem()
+    det_shots = np.array([[1]], dtype=bool)
+    decoder = GurobiDecoder(dem)
+    obs, weights, logical_gap = decoder.decode(
+        det_shots,
+        return_weights=True,
+        return_logical_gap=True,
+    )
+    assert obs.shape == (1, 1)
+    assert weights.shape == (1,)
+    assert logical_gap.shape == (1,)
 
 
 def test_preprocess_populates_fields():
