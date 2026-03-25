@@ -75,7 +75,11 @@ def test_immediate_loop_exports():
 
 def test_sinter_interface_imports():
     import sinter
-    from bloqade.decoders.sinter_interface import SinterTableDecoder, SinterGurobiDecoder
+
+    from bloqade.decoders.sinter_interface import (
+        SinterTableDecoder,
+        SinterGurobiDecoder,
+    )
 
     assert issubclass(SinterTableDecoder, sinter.Decoder)
     assert issubclass(SinterGurobiDecoder, sinter.Decoder)

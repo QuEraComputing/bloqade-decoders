@@ -6,13 +6,13 @@ import pytest
 import sinter
 
 from bloqade.decoders import TableDecoder
+from bloqade.decoders.sinter_interface import SinterTableDecoder
 from bloqade.decoders._decoders.mld.utils import (
     shots_to_counts,
     pack_boolean_array,
     unpack_boolean_array,
     det_obs_shots_to_counts,
 )
-from bloqade.decoders.sinter_interface import SinterTableDecoder
 
 from .conftest import pack_dets, simple_dem, unpack_obs, repetition_circuit
 
