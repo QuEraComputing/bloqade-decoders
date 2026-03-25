@@ -41,7 +41,7 @@ Or for MWPF do:
 pip install bloqade-decoders[mwpf]
 ```
 
-For MLE (requires a [Gurobi](https://www.gurobi.com/) license):
+For MLE (a full [Gurobi license](https://www.gurobi.com/academia/academic-program-and-licenses/) is needed for larger problems, but small models work with the [size-limited license](https://support.gurobi.com/hc/en-us/articles/360051597492-How-do-I-resolve-a-Model-too-large-for-size-limited-Gurobi-license-error) bundled with `gurobipy`):
 
 ```bash
 pip install bloqade-decoders[mle]
