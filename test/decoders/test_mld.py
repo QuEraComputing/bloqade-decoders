@@ -12,7 +12,7 @@ from bloqade.decoders._decoders.mld.utils import (
     unpack_boolean_array,
     det_obs_shots_to_counts,
 )
-from bloqade.decoders._decoders.mld.sinter_interface import SinterTableDecoder
+from bloqade.decoders.sinter_interface import SinterTableDecoder
 
 from .conftest import pack_dets, simple_dem, unpack_obs, repetition_circuit
 

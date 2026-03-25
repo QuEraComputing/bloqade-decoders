@@ -73,6 +73,14 @@ def test_immediate_loop_exports():
     assert callable(immediate_loop.repeat)
 
 
+def test_sinter_interface_imports():
+    import sinter
+    from bloqade.decoders.sinter_interface import SinterTableDecoder, SinterGurobiDecoder
+
+    assert issubclass(SinterTableDecoder, sinter.Decoder)
+    assert issubclass(SinterGurobiDecoder, sinter.Decoder)
+
+
 def test_measurement_result_value_enum():
     """Test MeasurementResultValue enum values."""
     from bloqade.decoders.dialects.annotate.types import MeasurementResultValue

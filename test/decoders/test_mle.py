@@ -6,7 +6,7 @@ import pytest
 import sinter
 
 from bloqade.decoders import GurobiDecoder
-from bloqade.decoders._decoders.mle.sinter_interface import SinterGurobiDecoder
+from bloqade.decoders.sinter_interface import SinterGurobiDecoder
 
 from .conftest import pack_dets, simple_dem, unpack_obs, repetition_circuit
 
