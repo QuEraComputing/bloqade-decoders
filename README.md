@@ -9,8 +9,14 @@ their corresponding interfaces are immediately available for decoding use upon i
 - BP+LSD - through `bloqade.decoders.BpLsdDecoder`
 - Belief Find - through `bloqade.decoders.BeliefFindDecoder`
 
-Interfaces also exist for the Hypergraph Minimum-Weight Parity Factor [MWPF](https://github.com/yuewuo/mwpf) decoder as well as
-the [Tesseract decoder](https://github.com/quantumlib/tesseract-decoder) but the decoders themselves are not included as a dependency and are instead optional.
+Interfaces also exist for the following optional decoders, which are not included as dependencies by default:
+
+- MWPF - through `bloqade.decoders.MWPFDecoder` ([MWPF](https://github.com/yuewuo/mwpf))
+- Tesseract - through `bloqade.decoders.TesseractDecoder` ([Tesseract](https://github.com/quantumlib/tesseract-decoder))
+- MLE (Gurobi) - through `bloqade.decoders.GurobiDecoder`, finds the most likely error pattern via mixed-integer programming
+- MLD (Table Lookup) - through `bloqade.decoders.TableDecoder`, builds a lookup table from sampled data
+
+Sinter-compatible adapters for MLE and MLD are also available through `bloqade.decoders.sinter_interface`.
 
 You can install them separately or specify you would like them included with the `bloqade-decoders` installation through the
 additional instructions below.
@@ -35,10 +41,22 @@ Or for MWPF do:
 pip install bloqade-decoders[mwpf]
 ```
 
-and for both, you can do:
+For MLE (a full [Gurobi license](https://www.gurobi.com/academia/academic-program-and-licenses/) is needed for larger problems, but small models work with the [size-limited license](https://support.gurobi.com/hc/en-us/articles/360051597492-How-do-I-resolve-a-Model-too-large-for-size-limited-Gurobi-license-error) bundled with `gurobipy`):
 
 ```bash
-pip install bloqade-decoders[mwpf, tesseract]
+pip install bloqade-decoders[mle]
+```
+
+For MLD:
+
+```bash
+pip install bloqade-decoders[mld]
+```
+
+You can combine multiple extras:
+
+```bash
+pip install bloqade-decoders[mwpf, tesseract, mle, mld, sinter]
 ```
 
 ## Usage
@@ -71,4 +89,30 @@ decoder = BpOsdDecoder(dem, bp_method="product_sum")
 decoded_observable = decoder.decode(syndromes)
 # decoded_observable should give you
 # np.array([[False], [True]])
+```
+
+### MLE / MLD Decoders
+
+The `GurobiDecoder` takes a DEM directly (note: must use `decompose_errors=False`):
+
+```python
+from bloqade.decoders import GurobiDecoder
+
+decoder = GurobiDecoder(dem)
+corrections = decoder.decode(syndromes)
+```
+
+The `TableDecoder` can be constructed directly with a DEM and pre-computed counts, or
+from a stim circuit which handles the sampling for you:
+
+```python
+from bloqade.decoders import TableDecoder
+
+# from a circuit (samples shots to build the lookup table)
+decoder = TableDecoder.from_stim_circuit(circuit, num_shots=100_000)
+
+# or from pre-sampled detector-observable shots
+decoder = TableDecoder.from_det_obs_shots(dem, det_obs_shots)
+
+corrections = decoder.decode(syndromes)
 ```

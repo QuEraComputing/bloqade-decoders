@@ -4,6 +4,8 @@ from ._decoders import (
     MWPFDecoder as MWPFDecoder,
     BpLsdDecoder as BpLsdDecoder,
     BpOsdDecoder as BpOsdDecoder,
+    TableDecoder as TableDecoder,
+    GurobiDecoder as GurobiDecoder,
     TesseractDecoder as TesseractDecoder,
     BeliefFindDecoder as BeliefFindDecoder,
 )
