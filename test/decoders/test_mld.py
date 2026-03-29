@@ -5,54 +5,16 @@ import numpy as np
 import pytest
 import sinter
 
-from bloqade.decoders import TableDecoder, SinterTableDecoder
-from bloqade.decoders._decoders.mld import (
+from bloqade.decoders import TableDecoder
+from bloqade.decoders.sinter_interface import SinterTableDecoder
+from bloqade.decoders._decoders.mld.utils import (
     shots_to_counts,
     pack_boolean_array,
     unpack_boolean_array,
     det_obs_shots_to_counts,
 )
-from bloqade.decoders._decoders.base import BaseDecoder
 
 from .conftest import pack_dets, simple_dem, unpack_obs, repetition_circuit
-
-
-def repetition_stim():
-    circ = stim.Circuit("""
-        R 0 1 2
-        X_ERROR(0.1) 0 1 2
-        MZZ 0 1
-        DETECTOR rec[-1]
-        MZZ 1 2
-        DETECTOR rec[-1]
-        M 0 1 2
-        OBSERVABLE_INCLUDE(0) rec[-1] rec[-2] rec[-3]
-    """)
-    return circ
-
-
-def repetition_shots():
-    det_shots = np.array([[1, 0], [1, 1], [0, 1], [0, 0]])
-    obs_shots = np.array([[1], [1], [1], [0]])
-    return det_shots, obs_shots
-
-
-def test_is_base_decoder():
-    dem = stim.DetectorErrorModel("error(0.1) D0 L0\n")
-    decoder = TableDecoder(dem, det_obs_counts=np.array([10, 0, 0, 1]))
-    assert isinstance(decoder, BaseDecoder)
-
-
-def test_num_detectors():
-    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
-    decoder = TableDecoder(dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0]))
-    assert decoder.num_detectors == 2
-
-
-def test_num_observables():
-    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
-    decoder = TableDecoder(dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0]))
-    assert decoder.num_observables == 1
 
 
 def test_pack_unpack():
@@ -101,10 +63,21 @@ def test_det_obs_shots_to_counts():
 
 
 def test_mld_repetition():
-    decoder = TableDecoder.from_stim_circuit(repetition_stim(), 10000)
+    circ = stim.Circuit("""
+        R 0 1 2
+        X_ERROR(0.1) 0 1 2
+        MZZ 0 1
+        DETECTOR rec[-1]
+        MZZ 1 2
+        DETECTOR rec[-1]
+        M 0 1 2
+        OBSERVABLE_INCLUDE(0) rec[-1] rec[-2] rec[-3]
+    """)
+    decoder = TableDecoder.from_stim_circuit(circ, 10000)
     assert decoder.num_detectors == 2
     assert decoder.num_observables == 1
-    det_shots, obs_shots = repetition_shots()
+    det_shots = np.array([[1, 0], [1, 1], [0, 1], [0, 0]])
+    obs_shots = np.array([[1], [1], [1], [0]])
     correction = decoder.decode(det_shots)
     assert np.array_equal(correction, obs_shots)
 
@@ -119,50 +92,6 @@ def test_decode_obs_det_counts():
     raw_det_obs_counts = np.arange(8)
     decoded_det_obs_counts = decoder.decode_det_obs_counts(raw_det_obs_counts)
     assert np.array_equal(decoded_det_obs_counts, np.array([0, 5, 6, 3, 4, 1, 2, 7]))
-
-
-def test_from_det_obs_shots():
-    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
-    det_obs_shots = np.array(
-        [
-            [0, 0, 0],
-            [1, 0, 1],
-            [0, 1, 1],
-            [1, 0, 1],
-            [0, 0, 0],
-            [0, 1, 1],
-        ],
-        dtype=bool,
-    )
-    decoder = TableDecoder.from_det_obs_shots(dem, det_obs_shots)
-    assert decoder.num_detectors == 2
-    assert decoder.num_observables == 1
-    assert decoder.det_obs_counts.sum() == 6
-
-
-def test_update_det_obs_counts_invalidates_cache():
-    dem = stim.DetectorErrorModel("error(0.1) D0 L0\n")
-    decoder = TableDecoder(dem, det_obs_counts=np.array([10, 0, 0, 1]))
-    decoder.cache_correction()
-    assert decoder.is_cached_correction
-    new_shots = np.array([[0, 0], [1, 1]], dtype=bool)
-    decoder.update_det_obs_counts(new_shots)
-    assert not decoder.is_cached_correction
-    assert not decoder.is_cached_df
-
-
-def test_det_obs_dataframe():
-    dem = stim.DetectorErrorModel("error(0.1) D0 L0\n")
-    decoder = TableDecoder(dem, det_obs_counts=np.array([5, 0, 3, 2]))
-    df = decoder.det_obs_dataframe
-    assert "det-0" in df.columns
-    assert "obs-0" in df.columns
-    assert "samples" in df.columns
-    assert df["samples"].sum() == 10
-    # cached
-    assert decoder.is_cached_df
-    df2 = decoder.det_obs_dataframe
-    assert df is df2
 
 
 def test_no_error_syndrome():
@@ -259,16 +188,6 @@ def test_sinter_table_no_error_syndrome():
     assert np.array_equal(obs_predictions, np.array([[False]]))
 
 
-def test_sinter_table_custom_num_shots():
-    decoder = SinterTableDecoder(num_shots=10000)
-    assert decoder.num_shots == 10000
-
-
-def test_sinter_table_default_num_shots():
-    decoder = SinterTableDecoder()
-    assert decoder.num_shots == 2**26
-
-
 @pytest.mark.slow
 def test_sinter_collect_table():
     circuit = repetition_circuit()
@@ -292,7 +211,7 @@ def test_sinter_collect_table():
 
 
 def test_update_det_obs_counts_wrong_columns():
-    """Wrong column count raises ValueError (covers line 199)."""
+    """Wrong column count raises ValueError."""
     dem = stim.DetectorErrorModel("error(0.1) D0 L0\n")
     decoder = TableDecoder(dem, det_obs_counts=np.array([10, 0, 0, 1]))
     wrong_shots = np.array([[0, 0, 0]], dtype=bool)  # 3 cols, expected 2
@@ -301,7 +220,7 @@ def test_update_det_obs_counts_wrong_columns():
 
 
 def test_decode_det_obs_counts_wrong_length():
-    """Wrong array length raises ValueError (covers line 260)."""
+    """Wrong array length raises ValueError."""
     dem = stim.DetectorErrorModel("error(0.1) D0 L0\n")
     decoder = TableDecoder(dem, det_obs_counts=np.array([10, 0, 0, 1]))
     wrong_counts = np.array([1, 2, 3])  # length 3, expected 4

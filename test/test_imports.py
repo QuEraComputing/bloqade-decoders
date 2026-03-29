@@ -9,8 +9,6 @@ def test_decoder_exports():
     assert hasattr(decoders, "MWPFDecoder")
     assert hasattr(decoders, "GurobiDecoder")
     assert hasattr(decoders, "TableDecoder")
-    assert hasattr(decoders, "SinterGurobiDecoder")
-    assert hasattr(decoders, "SinterTableDecoder")
     assert hasattr(decoders, "dialects")
 
     assert hasattr(decoders, "Detector")
@@ -73,6 +71,18 @@ def test_immediate_loop_exports():
 
     assert hasattr(immediate_loop, "repeat")
     assert callable(immediate_loop.repeat)
+
+
+def test_sinter_interface_imports():
+    import sinter
+
+    from bloqade.decoders.sinter_interface import (
+        SinterTableDecoder,
+        SinterGurobiDecoder,
+    )
+
+    assert issubclass(SinterTableDecoder, sinter.Decoder)
+    assert issubclass(SinterGurobiDecoder, sinter.Decoder)
 
 
 def test_measurement_result_value_enum():
