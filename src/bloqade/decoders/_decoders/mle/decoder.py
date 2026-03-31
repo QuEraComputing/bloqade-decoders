@@ -23,14 +23,14 @@ class GurobiDecoder(BaseDecoder):
         dem: The detector error model describing the error structure.
     """
 
-    _env: ClassVar[object | None] = None
-
     _dem: stim.DetectorErrorModel
     _detector_vertices: list[list[int]]
     _weights: list[float]
     _observable_indices: list[list[int]]
     _certain_det_flip: np.ndarray
     _certain_obs_flip: np.ndarray
+
+    _env: ClassVar[object | None] = None
     _model: object | None
     _error_vars: list | None
     _constraints: list | None
@@ -243,7 +243,8 @@ class GurobiDecoder(BaseDecoder):
                     f"Gurobi did not find an optimal solution. Status: {model.status}"  # type: ignore[union-attr]
                 )
             error = np.round(
-                np.array([e.X for e in error_vars]), decimals=0  # type: ignore[union-attr]
+                np.array([e.X for e in error_vars]),
+                decimals=0,  # type: ignore[union-attr]
             ).astype(bool)
             errors[d, :] = error
 
