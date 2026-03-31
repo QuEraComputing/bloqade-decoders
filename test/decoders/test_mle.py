@@ -285,6 +285,56 @@ def test_prob_zero_error_skipped():
     assert result.shape == (1, 1)
 
 
+def test_model_built_during_init():
+    """Model is built eagerly during __init__, not lazily."""
+    dem = regular_dem()
+    decoder = GurobiDecoder(dem)
+    assert decoder._model is not None
+
+
+def test_model_reused_across_calls():
+    """The same model object is reused across multiple decode_error calls."""
+    dem = regular_dem()
+    det_shots_1, obs_shots_1 = regular_samples()
+    decoder = GurobiDecoder(dem)
+
+    # First call
+    errors_1 = decoder.decode_error(det_shots_1)
+    model_after_first = decoder._model
+
+    # Second call with different syndrome
+    det_shots_2 = np.array(
+        [[0, 1, 1, 0, 0, 0, 0, 0, 0, 0]],
+        dtype=bool,
+    )
+    errors_2 = decoder.decode_error(det_shots_2)
+    model_after_second = decoder._model
+
+    # Same model object reused
+    assert model_after_first is model_after_second
+
+    # Both calls produce correct results
+    obs_1 = decoder.logical_from_error(errors_1)
+    assert np.array_equal(obs_1, obs_shots_1)
+    assert errors_2.shape == (1, 10)
+
+
+def test_close_releases_model():
+    """close() releases the model; decoder rebuilds it on next use."""
+    dem = regular_dem()
+    det_shots, obs_shots = regular_samples()
+    decoder = GurobiDecoder(dem)
+    assert decoder._model is not None
+
+    decoder.close()
+    assert decoder._model is None
+
+    # Decoder still works after close (model is rebuilt)
+    result = decoder.decode(det_shots)
+    assert np.array_equal(result, obs_shots)
+    assert decoder._model is not None
+
+
 def test_prob_one_error_pre_applied():
     """error(1.0) always fires and is pre-applied to the syndrome."""
     dem = stim.DetectorErrorModel("""
