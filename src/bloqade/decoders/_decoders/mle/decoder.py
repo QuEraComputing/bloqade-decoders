@@ -25,6 +25,16 @@ class GurobiDecoder(BaseDecoder):
 
     _env: ClassVar[object | None] = None
 
+    _dem: stim.DetectorErrorModel
+    _detector_vertices: list[list[int]]
+    _weights: list[float]
+    _observable_indices: list[list[int]]
+    _certain_det_flip: np.ndarray
+    _certain_obs_flip: np.ndarray
+    _model: object | None
+    _error_vars: list | None
+    _constraints: list | None
+
     def __init__(self, dem: stim.DetectorErrorModel) -> None:
         try:
             import gurobipy  # noqa: F401
@@ -118,9 +128,9 @@ class GurobiDecoder(BaseDecoder):
         self._certain_det_flip = certain_det_flip
         self._certain_obs_flip = certain_obs_flip
 
-        self._model: object | None = None
-        self._error_vars: list | None = None
-        self._constraints: list | None = None
+        self._model = None
+        self._error_vars = None
+        self._constraints = None
         self._build_model()
 
     def _build_model(self) -> None:
