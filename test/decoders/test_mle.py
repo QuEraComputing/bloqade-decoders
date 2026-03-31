@@ -383,6 +383,21 @@ def test_named_params_override_gurobi_params():
     assert decoder._solver_params == {"TimeLimit": 10.0, "Threads": 4}
 
 
+def test_params_survive_close_rebuild():
+    """Solver params are re-applied when model is rebuilt after close()."""
+    dem = regular_dem()
+    det_shots, obs_shots = regular_samples()
+    decoder = GurobiDecoder(dem, time_limit=30.0, threads=1)
+    decoder.close()
+    assert decoder._model is None
+
+    # Decode triggers rebuild; params should still be applied
+    result = decoder.decode(det_shots)
+    assert (obs_shots == result).all()
+    assert decoder._model.getParamInfo("TimeLimit")[2] == 30.0
+    assert decoder._model.getParamInfo("Threads")[2] == 1
+
+
 def test_prob_one_error_pre_applied():
     """error(1.0) always fires and is pre-applied to the syndrome."""
     dem = stim.DetectorErrorModel("""
