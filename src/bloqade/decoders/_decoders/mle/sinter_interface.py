@@ -34,12 +34,19 @@ class _CompiledGurobiDecoder(_SinterCompiledDecoder):
 
 
 class SinterGurobiDecoder(_SinterDecoder):
-    """Sinter-compatible adapter for the GurobiDecoder (MLE)."""
+    """Sinter-compatible adapter for the GurobiDecoder (MLE).
+
+    Args:
+        **kwargs: Keyword arguments forwarded to :class:`GurobiDecoder`.
+    """
+
+    def __init__(self, **kwargs: object) -> None:
+        self._decoder_kwargs = kwargs
 
     def compile_decoder_for_dem(
         self,
         *,
         dem: stim.DetectorErrorModel,
     ) -> _SinterCompiledDecoder:
-        decoder = GurobiDecoder(dem)
+        decoder = GurobiDecoder(dem, **self._decoder_kwargs)
         return _CompiledGurobiDecoder(decoder)
