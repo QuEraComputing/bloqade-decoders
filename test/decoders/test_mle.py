@@ -335,6 +335,37 @@ def test_close_releases_model():
     assert decoder._model is not None
 
 
+def test_named_params_stored():
+    """Named solver params are stored as Gurobi CamelCase keys."""
+    dem = regular_dem()
+    decoder = GurobiDecoder(dem, time_limit=30.0, threads=2)
+    assert decoder._solver_params == {"TimeLimit": 30.0, "Threads": 2}
+
+
+def test_named_params_applied_to_model():
+    """Named solver params are applied to the Gurobi model."""
+    dem = regular_dem()
+    decoder = GurobiDecoder(dem, time_limit=30.0, threads=2)
+    assert decoder._model.getParamInfo("TimeLimit")[2] == 30.0
+    assert decoder._model.getParamInfo("Threads")[2] == 2
+
+
+def test_named_params_none_ignored():
+    """None values are not stored in _solver_params."""
+    dem = regular_dem()
+    decoder = GurobiDecoder(dem, time_limit=None, threads=None)
+    assert decoder._solver_params == {}
+
+
+def test_named_params_decode_correctness():
+    """Decoder with named params still produces correct results."""
+    dem = regular_dem()
+    det_shots, obs_shots = regular_samples()
+    decoder = GurobiDecoder(dem, threads=1)
+    result = decoder.decode(det_shots)
+    assert (obs_shots == result).all()
+
+
 def test_prob_one_error_pre_applied():
     """error(1.0) always fires and is pre-applied to the syndrome."""
     dem = stim.DetectorErrorModel("""
