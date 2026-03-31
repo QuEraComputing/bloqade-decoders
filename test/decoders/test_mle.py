@@ -398,6 +398,15 @@ def test_params_survive_close_rebuild():
     assert decoder._model.getParamInfo("Threads")[2] == 1
 
 
+def test_sinter_gurobi_passes_kwargs():
+    """SinterGurobiDecoder forwards kwargs to underlying GurobiDecoder."""
+    dem = regular_dem()
+    sinter_decoder = SinterGurobiDecoder(time_limit=30.0, threads=1)
+    compiled = sinter_decoder.compile_decoder_for_dem(dem=dem)
+    inner = compiled._decoder
+    assert inner._solver_params == {"TimeLimit": 30.0, "Threads": 1}
+
+
 def test_prob_one_error_pre_applied():
     """error(1.0) always fires and is pre-applied to the syndrome."""
     dem = stim.DetectorErrorModel("""
