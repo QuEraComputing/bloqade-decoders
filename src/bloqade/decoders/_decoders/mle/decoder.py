@@ -167,7 +167,10 @@ class GurobiDecoder(BaseDecoder):
             self._constraints = None
 
     def __del__(self) -> None:
-        self.close()
+        try:
+            self.close()
+        except Exception:
+            pass
 
     @staticmethod
     def _check_no_separators(dem: stim.DetectorErrorModel) -> None:
