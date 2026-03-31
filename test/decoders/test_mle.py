@@ -366,6 +366,23 @@ def test_named_params_decode_correctness():
     assert (obs_shots == result).all()
 
 
+def test_gurobi_params_dict():
+    """gurobi_params dict passes arbitrary Gurobi params."""
+    dem = regular_dem()
+    decoder = GurobiDecoder(dem, gurobi_params={"TimeLimit": 60.0})
+    assert decoder._solver_params == {"TimeLimit": 60.0}
+    assert decoder._model.getParamInfo("TimeLimit")[2] == 60.0
+
+
+def test_named_params_override_gurobi_params():
+    """Named params take precedence over gurobi_params for the same key."""
+    dem = regular_dem()
+    decoder = GurobiDecoder(
+        dem, time_limit=10.0, gurobi_params={"TimeLimit": 60.0, "Threads": 4}
+    )
+    assert decoder._solver_params == {"TimeLimit": 10.0, "Threads": 4}
+
+
 def test_prob_one_error_pre_applied():
     """error(1.0) always fires and is pre-applied to the syndrome."""
     dem = stim.DetectorErrorModel("""
