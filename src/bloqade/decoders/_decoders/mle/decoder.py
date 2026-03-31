@@ -279,10 +279,8 @@ class GurobiDecoder(BaseDecoder):
         if self._model is None:
             self._build_model()
 
-        env = GurobiDecoder._env
-        env.setParam("OutputFlag", 1 if verbose else 0)  # type: ignore[union-attr]
-
         model = self._model
+        model.setParam("OutputFlag", 1 if verbose else 0)  # type: ignore[union-attr]
         error_vars = self._error_vars
         constraints = self._constraints
 
