@@ -118,6 +118,57 @@ class GurobiDecoder(BaseDecoder):
         self._certain_det_flip = certain_det_flip
         self._certain_obs_flip = certain_obs_flip
 
+        self._model: object | None = None
+        self._error_vars: list | None = None
+        self._constraints: list | None = None
+        self._build_model()
+
+    def _build_model(self) -> None:
+        """Build the Gurobi model once with placeholder RHS=0 constraints."""
+        import gurobipy as gp
+        from gurobipy import GRB
+
+        if GurobiDecoder._env is None:
+            GurobiDecoder._env = gp.Env()
+        env = GurobiDecoder._env
+
+        m = gp.Model("mip1", env=env)
+
+        error_vars: list[gp.Var] = []
+        objective = gp.LinExpr(0)
+        for i, w in enumerate(self._weights):
+            v = m.addVar(vtype=GRB.BINARY, name="e" + str(i))
+            error_vars.append(v)
+            objective += w * v
+        m.setObjective(objective, GRB.MAXIMIZE)
+
+        constraints: list[gp.Constr] = []
+        for i, dv in enumerate(self._detector_vertices):
+            h = m.addVar(vtype=GRB.INTEGER, name="h" + str(i), ub=len(dv), lb=0)
+            lhs = gp.LinExpr(0)
+            for j in dv:
+                lhs += error_vars[j]
+            lhs -= 2 * h
+            c = m.addConstr(lhs == 0, name="c" + str(i))
+            constraints.append(c)
+
+        m.update()
+
+        self._model = m
+        self._error_vars = error_vars
+        self._constraints = constraints
+
+    def close(self) -> None:
+        """Release the cached Gurobi model resources."""
+        if getattr(self, "_model", None) is not None:
+            self._model.close()  # type: ignore[union-attr]
+            self._model = None
+            self._error_vars = None
+            self._constraints = None
+
+    def __del__(self) -> None:
+        self.close()
+
     @staticmethod
     def _check_no_separators(dem: stim.DetectorErrorModel) -> None:
         """Raise ValueError if the DEM contains separator targets."""
@@ -147,62 +198,42 @@ class GurobiDecoder(BaseDecoder):
         return np.sum(error * self._weights, axis=1)
 
     def decode_error(self, det_shots: np.ndarray, verbose: bool = False) -> np.ndarray:
-        import gurobipy as gp
         from gurobipy import GRB
 
         num_shots = det_shots.shape[0]
         num_errors = len(self._weights)
         errors = np.zeros([num_shots, num_errors], dtype=bool)
 
-        if GurobiDecoder._env is None:
-            GurobiDecoder._env = gp.Env()
+        if self._model is None:
+            self._build_model()
+
         env = GurobiDecoder._env
         env.setParam("OutputFlag", 1 if verbose else 0)  # type: ignore[union-attr]
 
-        weights = self._weights
-        detector_vertices = self._detector_vertices
+        model = self._model
+        error_vars = self._error_vars
+        constraints = self._constraints
+
         # Pre-apply certain errors (prob=1.0) to the syndrome
         det_shots = det_shots.astype(int) ^ self._certain_det_flip
 
         for d, detector_shot in enumerate(det_shots):
-            m = gp.Model("mip1", env=env)
-            error_variables: list[gp.Var] = []
-            detector_variables: list[gp.Var] = []
-            objective: gp.LinExpr = gp.LinExpr(0)
+            for i, c in enumerate(constraints):  # type: ignore[arg-type]
+                c.RHS = float(detector_shot[i])
 
-            for i, w in enumerate(weights):
-                error_variables.append(m.addVar(vtype=GRB.BINARY, name="e" + str(i)))
-                objective += w * error_variables[i]
-            m.setObjective(objective, GRB.MAXIMIZE)
+            model.optimize()  # type: ignore[union-attr]
 
-            for i, dv in enumerate(detector_vertices):
-                detector_variables.append(
-                    m.addVar(
-                        vtype=GRB.INTEGER,
-                        name="h" + str(i),
-                        ub=len(dv),
-                        lb=0,
-                    )
-                )
-                constraint: gp.LinExpr = gp.LinExpr(0)
-                for j in dv:
-                    constraint += error_variables[j]
-                constraint -= 2 * detector_variables[i]
-                m.addConstr(constraint == detector_shot[i], name="c" + str(i))
-
-            m.optimize()
-            if m.status != GRB.OPTIMAL:
+            if model.status != GRB.OPTIMAL:  # type: ignore[union-attr]
                 if verbose:
-                    print("Did not find optimal solution", m.status)
-                m.close()
+                    print("Did not find optimal solution", model.status)  # type: ignore[union-attr]
                 raise RuntimeError(
-                    f"Gurobi did not find an optimal solution. Status: {m.status}"
+                    f"Gurobi did not find an optimal solution. Status: {model.status}"  # type: ignore[union-attr]
                 )
             error = np.round(
-                np.array([e.X for e in error_variables]), decimals=0
+                np.array([e.X for e in error_vars]), decimals=0  # type: ignore[union-attr]
             ).astype(bool)
             errors[d, :] = error
-            m.close()
+
         return errors
 
     def logical_from_error(self, errors: np.ndarray) -> np.ndarray:
