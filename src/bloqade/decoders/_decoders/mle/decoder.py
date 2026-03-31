@@ -9,6 +9,18 @@ from stim import DemInstruction
 
 from ..base import BaseDecoder
 
+_PARAM_MAP: dict[str, str] = {
+    "time_limit": "TimeLimit",
+    "mem_limit": "MemLimit",
+    "threads": "Threads",
+    "mip_gap": "MIPGap",
+    "mip_focus": "MIPFocus",
+    "presolve": "Presolve",
+    "cuts": "Cuts",
+    "node_limit": "NodeLimit",
+    "solution_limit": "SolutionLimit",
+}
+
 
 class GurobiDecoder(BaseDecoder):
     """MLE decoder using Gurobi mixed-integer programming solver.
@@ -21,6 +33,17 @@ class GurobiDecoder(BaseDecoder):
 
     Args:
         dem: The detector error model describing the error structure.
+        time_limit: Maximum solve time in seconds per optimize() call.
+        mem_limit: Maximum memory usage in GB.
+        threads: Number of solver threads (0 = auto-detect).
+        mip_gap: Relative MIP optimality gap tolerance.
+        mip_focus: Solver focus (0=balanced, 1=feasible, 2=optimal, 3=bound).
+        presolve: Presolve level (-1=auto, 0=off, 1=conservative, 2=aggressive).
+        cuts: Cut generation (-1=auto, 0=off, 1=conservative, 2=aggressive).
+        node_limit: Maximum number of branch-and-bound nodes.
+        solution_limit: Stop after finding this many feasible solutions.
+        gurobi_params: Dict of additional Gurobi parameter names to values.
+            Named parameters above take precedence over entries in this dict.
     """
 
     _dem: stim.DetectorErrorModel
@@ -29,13 +52,28 @@ class GurobiDecoder(BaseDecoder):
     _observable_indices: list[list[int]]
     _certain_det_flip: np.ndarray
     _certain_obs_flip: np.ndarray
+    _solver_params: dict[str, object]
 
     _env: ClassVar[object | None] = None
     _model: object | None
     _error_vars: list | None
     _constraints: list | None
 
-    def __init__(self, dem: stim.DetectorErrorModel) -> None:
+    def __init__(
+        self,
+        dem: stim.DetectorErrorModel,
+        *,
+        time_limit: float | None = None,
+        mem_limit: float | None = None,
+        threads: int | None = None,
+        mip_gap: float | None = None,
+        mip_focus: int | None = None,
+        presolve: int | None = None,
+        cuts: int | None = None,
+        node_limit: float | None = None,
+        solution_limit: int | None = None,
+        gurobi_params: dict[str, object] | None = None,
+    ) -> None:
         try:
             import gurobipy  # noqa: F401
         except ImportError as e:
@@ -53,6 +91,25 @@ class GurobiDecoder(BaseDecoder):
             ) from e
 
         super().__init__(dem)
+
+        # Build unified solver params dict
+        params: dict[str, object] = dict(gurobi_params) if gurobi_params else {}
+        local_vars = {
+            "time_limit": time_limit,
+            "mem_limit": mem_limit,
+            "threads": threads,
+            "mip_gap": mip_gap,
+            "mip_focus": mip_focus,
+            "presolve": presolve,
+            "cuts": cuts,
+            "node_limit": node_limit,
+            "solution_limit": solution_limit,
+        }
+        for py_name, value in local_vars.items():
+            if value is not None:
+                params[_PARAM_MAP[py_name]] = value
+        self._solver_params = params
+
         self._dem = dem.flattened()
         self._check_no_separators(dem)
 
@@ -143,6 +200,8 @@ class GurobiDecoder(BaseDecoder):
         env = GurobiDecoder._env
 
         m = gp.Model("mip1", env=env)
+        for param_name, param_value in self._solver_params.items():
+            m.setParam(param_name, param_value)  # type: ignore[arg-type]
 
         error_vars: list[gp.Var] = []
         objective = gp.LinExpr(0)
