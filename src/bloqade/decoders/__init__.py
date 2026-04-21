@@ -8,6 +8,7 @@ from ._decoders import (
     GurobiDecoder as GurobiDecoder,
     TesseractDecoder as TesseractDecoder,
     BeliefFindDecoder as BeliefFindDecoder,
+    ConfidenceDecoder as ConfidenceDecoder,
 )
 from .dialects.annotate.types import (
     Detector as Detector,
