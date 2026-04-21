@@ -7,10 +7,11 @@ import numpy as np
 import numpy.typing as npt
 from stim import DemInstruction
 
-from ..base import BaseDecoder
+from ..base import ConfidenceDecoder
 
 
-class GurobiDecoder(BaseDecoder):
+class GurobiDecoder(ConfidenceDecoder):
+    confidence_score_mode = "logical_gap"
     """MLE decoder using Gurobi mixed-integer programming solver.
 
     Finds the most likely error pattern matching an observed syndrome
@@ -333,6 +334,18 @@ class GurobiDecoder(BaseDecoder):
         if single_shot:
             return decoded_obs[0], logical_gaps
         return decoded_obs, logical_gaps
+
+    def decode_with_confidence(
+        self, detector_bits: npt.NDArray[np.bool_]
+    ) -> tuple[npt.NDArray[np.bool_], np.float64]:
+        """Decode a single shot and return the logical-gap confidence."""
+        if detector_bits.ndim != 1:
+            raise ValueError(
+                "decode_with_confidence expects a single detector shot (1D array)."
+            )
+        decoded_obs, logical_gap = self.decode_with_logical_gap(detector_bits)
+        logical_gap_arr = np.asarray(logical_gap, dtype=np.float64).reshape(-1)
+        return decoded_obs.astype(np.bool_), np.float64(logical_gap_arr[0])
 
     def logical_from_error(self, errors: np.ndarray) -> np.ndarray:
         num_shots = errors.shape[0]
