@@ -9,6 +9,8 @@ from ._decoders import (
     TesseractDecoder as TesseractDecoder,
     BeliefFindDecoder as BeliefFindDecoder,
     ConfidenceDecoder as ConfidenceDecoder,
+    SparseTableDecoder as SparseTableDecoder,
+    TableDecoderWithConfidence as TableDecoderWithConfidence,
 )
 from .dialects.annotate.types import (
     Detector as Detector,
