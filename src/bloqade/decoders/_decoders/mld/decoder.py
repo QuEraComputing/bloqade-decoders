@@ -49,6 +49,24 @@ def _as_count_table(counts: np.ndarray) -> npt.NDArray[np.uint32]:
     return arr.astype(_COUNT_DTYPE, copy=False)
 
 
+def _add_grouped_shot_counts(
+    count_table: npt.NDArray[np.uint32],
+    det_obs_shots: np.ndarray,
+) -> None:
+    """Add shots by grouping equal packed detector-observable labels."""
+
+    packed = pack_boolean_array(det_obs_shots).astype(np.int64, copy=False)
+    labels, label_counts = np.unique(packed, return_counts=True)
+    if len(labels) == 0:
+        return
+    label_indices = labels.astype(np.intp, copy=False)
+    if np.any(label_counts > (_COUNT_MAX - count_table[label_indices])):
+        raise OverflowError(
+            f"TableDecoder count table would exceed uint32 max ({_COUNT_MAX})."
+        )
+    count_table[label_indices] += label_counts.astype(_COUNT_DTYPE, copy=False)
+
+
 class TableDecoder(BaseDecoder):
     """Maximum likelihood decoder from detector-observable lookup table.
 
@@ -67,8 +85,9 @@ class TableDecoder(BaseDecoder):
         det_obs_counts: Array of shape ``(2**(D+L),)`` counting
             detector-observable pattern frequencies. This may be an
             ``np.memmap``.
-        step_counts_memmap_path: Optional path for memmapping the temporary
-            per-update count table produced by ``update_det_obs_counts``.
+        step_counts_memmap_path: Deprecated compatibility option. Memmap-backed
+            decoders now update the persistent table from grouped packed labels
+            instead of allocating a temporary dense step-count table.
     """
 
     def __init__(
@@ -122,8 +141,9 @@ class TableDecoder(BaseDecoder):
             step_size: Number of shots per sampling batch.
             memmap_path: Optional path for memmapping the decoder's persistent
                 detector-observable count table.
-            step_counts_memmap_path: Optional path for memmapping each
-                per-update count table.
+            step_counts_memmap_path: Deprecated compatibility option. Memmap-backed
+                decoders use grouped packed-label updates instead of a temporary
+                dense step-count table.
 
         Returns:
             A TableDecoder with counts from the sampled shots.
@@ -194,8 +214,9 @@ class TableDecoder(BaseDecoder):
             det_obs_shots: Boolean array of shape (num_shots, D+L).
             memmap_path: Optional path for memmapping the decoder's persistent
                 detector-observable count table.
-            step_counts_memmap_path: Optional path for memmapping the
-                temporary count table used while adding these shots.
+            step_counts_memmap_path: Deprecated compatibility option. Memmap-backed
+                decoders use grouped packed-label updates instead of a temporary
+                dense step-count table.
 
         Returns:
             A TableDecoder with counts from the provided shots.
@@ -248,25 +269,10 @@ class TableDecoder(BaseDecoder):
                 f"Expected {data_len} columns (detectors + observables), "
                 f"got {det_obs_shots.shape[1]}"
             )
-        step_counts = shots_to_counts(
-            det_obs_shots,
-            memmap_path=self._step_counts_memmap_path,
-            dtype=(
-                _COUNT_DTYPE if self._step_counts_memmap_path is not None else np.int64
-            ),
-        )
-        if isinstance(step_counts, np.memmap):
-            nonzero = np.flatnonzero(step_counts)
-            if len(nonzero) and np.any(
-                step_counts[nonzero] > (_COUNT_MAX - self._det_obs_counts[nonzero])
-            ):
-                raise OverflowError(
-                    f"TableDecoder count table would exceed uint32 max ({_COUNT_MAX})."
-                )
-            self._det_obs_counts[nonzero] += step_counts[nonzero].astype(
-                _COUNT_DTYPE, copy=False
-            )
+        if isinstance(self._det_obs_counts, np.memmap):
+            _add_grouped_shot_counts(self._det_obs_counts, det_obs_shots)
         else:
+            step_counts = shots_to_counts(det_obs_shots)
             remaining = _COUNT_MAX - self._det_obs_counts
             if np.any(step_counts > remaining):
                 raise OverflowError(

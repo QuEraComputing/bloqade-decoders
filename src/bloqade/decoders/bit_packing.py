@@ -89,7 +89,11 @@ def shots_to_counts(
         shape=(count_len,),
     )
     counts[:] = 0
-    np.add.at(counts, packed_shots, 1)
+    labels, label_counts = np.unique(packed_shots, return_counts=True)
+    if len(labels):
+        counts[labels.astype(np.intp, copy=False)] = label_counts.astype(
+            counts.dtype, copy=False
+        )
     counts.flush()
     return counts
 

@@ -266,6 +266,17 @@ def test_table_decoder_can_store_counts_as_memmap(tmp_path):
     assert isinstance(decoder._det_obs_counts, np.memmap)
     assert decoder._det_obs_counts.dtype == np.uint32
     np.testing.assert_array_equal(
+        decoder._det_obs_counts,
+        np.array([1, 0, 0, 2], dtype=np.uint32),
+    )
+
+    decoder.update_det_obs_counts(np.array([[0, 0], [1, 1]], dtype=bool))
+
+    np.testing.assert_array_equal(
+        decoder._det_obs_counts,
+        np.array([2, 0, 0, 3], dtype=np.uint32),
+    )
+    np.testing.assert_array_equal(
         decoder.decode(np.array([[0], [1]], dtype=bool)),
         np.array([[0], [1]], dtype=bool),
     )
