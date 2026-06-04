@@ -243,3 +243,29 @@ def test_decode_det_obs_counts_wrong_length():
     wrong_counts = np.array([1, 2, 3])  # length 3, expected 4
     with pytest.raises(ValueError, match="length"):
         decoder.decode_det_obs_counts(wrong_counts)
+
+
+def test_table_decoder_can_store_counts_as_memmap(tmp_path):
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\n")
+    det_obs_shots = np.array(
+        [
+            [0, 0],
+            [1, 1],
+            [1, 1],
+        ],
+        dtype=bool,
+    )
+
+    decoder = TableDecoder.from_det_obs_shots(
+        dem,
+        det_obs_shots,
+        memmap_path=tmp_path / "det_obs_counts.dat",
+        step_counts_memmap_path=tmp_path / "step_counts.dat",
+    )
+
+    assert isinstance(decoder._det_obs_counts, np.memmap)
+    assert decoder._det_obs_counts.dtype == np.uint32
+    np.testing.assert_array_equal(
+        decoder.decode(np.array([[0], [1]], dtype=bool)),
+        np.array([[0], [1]], dtype=bool),
+    )

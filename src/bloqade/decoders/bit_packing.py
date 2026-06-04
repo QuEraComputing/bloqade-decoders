@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from os import PathLike
 from collections.abc import Sequence
 
 import numpy as np
@@ -53,26 +54,71 @@ def unpack_packed_bits(packed: int, length: int) -> npt.NDArray[np.uint8]:
     return ((np.uint64(packed) >> shifts) & 1).astype(np.uint8)
 
 
-def shots_to_counts(shots: np.ndarray) -> npt.NDArray[np.int64]:
-    """Convert a boolean shot matrix into a dense little-endian count table."""
+def shots_to_counts(
+    shots: np.ndarray,
+    *,
+    memmap_path: str | PathLike[str] | None = None,
+    dtype: npt.DTypeLike = np.int64,
+) -> np.ndarray:
+    """Convert a boolean shot matrix into a dense little-endian count table.
+
+    Args:
+        shots: A 2D bit array, with one shot per row.
+        memmap_path: Optional file path used to back the returned count table
+            with ``np.memmap``. When omitted, this returns an in-memory array.
+        dtype: Count-table dtype. Defaults to ``np.int64`` to preserve the
+            historical return dtype of ``np.bincount``.
+
+    Returns:
+        Dense count table indexed by little-endian packed shot labels.
+    """
 
     shot_bits = np.asarray(shots, dtype=np.uint8)
     if shot_bits.ndim != 2:
         raise ValueError("shots must be a 2D bit array.")
-    packed_shots = pack_boolean_array(shot_bits)
-    return np.bincount(
-        packed_shots.astype(np.int64, copy=False),
-        minlength=1 << shot_bits.shape[1],
+    packed_shots = pack_boolean_array(shot_bits).astype(np.int64, copy=False)
+    count_len = 1 << shot_bits.shape[1]
+    if memmap_path is None:
+        counts = np.bincount(packed_shots, minlength=count_len)
+        return counts.astype(dtype, copy=False)
+
+    counts = np.memmap(
+        memmap_path,
+        dtype=np.dtype(dtype),
+        mode="w+",
+        shape=(count_len,),
     )
+    counts[:] = 0
+    np.add.at(counts, packed_shots, 1)
+    counts.flush()
+    return counts
 
 
 def det_obs_shots_to_counts(
     det_shots: np.ndarray,
     obs_shots: np.ndarray,
-) -> npt.NDArray[np.int64]:
-    """Convert detector and observable shots into a combined count table."""
+    *,
+    memmap_path: str | PathLike[str] | None = None,
+    dtype: npt.DTypeLike = np.int64,
+) -> np.ndarray:
+    """Convert detector and observable shots into a combined count table.
 
-    return shots_to_counts(np.concatenate([det_shots, obs_shots], axis=1))
+    Args:
+        det_shots: Detector bit matrix.
+        obs_shots: Observable bit matrix.
+        memmap_path: Optional path used to back the returned table with
+            ``np.memmap``.
+        dtype: Count-table dtype.
+
+    Returns:
+        Dense count table indexed by little-endian detector-observable labels.
+    """
+
+    return shots_to_counts(
+        np.concatenate([det_shots, obs_shots], axis=1),
+        memmap_path=memmap_path,
+        dtype=dtype,
+    )
 
 
 def packed_pattern_targets(targets: np.ndarray) -> set[int]:

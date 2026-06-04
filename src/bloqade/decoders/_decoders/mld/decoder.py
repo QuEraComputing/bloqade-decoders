@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from os import PathLike
 
 import stim
 import numpy as np
@@ -15,15 +16,36 @@ _COUNT_DTYPE = np.uint32
 _COUNT_MAX = np.iinfo(_COUNT_DTYPE).max
 
 
+def _empty_count_table(
+    shape: int,
+    *,
+    memmap_path: str | PathLike[str] | None = None,
+) -> npt.NDArray[np.uint32]:
+    """Create a zeroed dense count table, optionally backed by memmap."""
+    if memmap_path is None:
+        return np.zeros(shape, dtype=_COUNT_DTYPE)
+    counts = np.memmap(
+        memmap_path,
+        dtype=_COUNT_DTYPE,
+        mode="w+",
+        shape=(shape,),
+    )
+    counts[:] = 0
+    counts.flush()
+    return counts
+
+
 def _as_count_table(counts: np.ndarray) -> npt.NDArray[np.uint32]:
     """Coerce a detector-observable count table to the decoder storage dtype."""
-    arr = np.asarray(counts)
+    arr = counts if isinstance(counts, np.memmap) else np.asarray(counts)
     if np.any(arr < 0):
         raise ValueError("det_obs_counts cannot contain negative counts.")
     if np.any(arr > _COUNT_MAX):
         raise OverflowError(
             f"det_obs_counts contains a value larger than uint32 max ({_COUNT_MAX})."
         )
+    if arr.dtype == _COUNT_DTYPE:
+        return arr
     return arr.astype(_COUNT_DTYPE, copy=False)
 
 
@@ -43,13 +65,18 @@ class TableDecoder(BaseDecoder):
     Args:
         dem: The detector error model.
         det_obs_counts: Array of shape ``(2**(D+L),)`` counting
-            detector-observable pattern frequencies.
+            detector-observable pattern frequencies. This may be an
+            ``np.memmap``.
+        step_counts_memmap_path: Optional path for memmapping the temporary
+            per-update count table produced by ``update_det_obs_counts``.
     """
 
     def __init__(
         self,
         dem: stim.DetectorErrorModel,
         det_obs_counts: np.ndarray,
+        *,
+        step_counts_memmap_path: str | PathLike[str] | None = None,
     ) -> None:
         super().__init__(dem)
         expected_len = 2 ** (dem.num_detectors + dem.num_observables)
@@ -61,6 +88,7 @@ class TableDecoder(BaseDecoder):
             )
         self._dem = dem
         self._det_obs_counts = _as_count_table(det_obs_counts)
+        self._step_counts_memmap_path = step_counts_memmap_path
         self._df = None
         self._is_cached_df = False
         self._maximum_likelihood_correction: np.ndarray | None = None
@@ -81,6 +109,9 @@ class TableDecoder(BaseDecoder):
         num_shots: int = 10**8,
         seed: int | None = None,
         step_size: int = 65536,
+        *,
+        memmap_path: str | PathLike[str] | None = None,
+        step_counts_memmap_path: str | PathLike[str] | None = None,
     ) -> TableDecoder:
         """Build a TableDecoder by sampling a stim circuit.
 
@@ -89,6 +120,10 @@ class TableDecoder(BaseDecoder):
             num_shots: Number of shots to sample.
             seed: Optional random seed.
             step_size: Number of shots per sampling batch.
+            memmap_path: Optional path for memmapping the decoder's persistent
+                detector-observable count table.
+            step_counts_memmap_path: Optional path for memmapping each
+                per-update count table.
 
         Returns:
             A TableDecoder with counts from the sampled shots.
@@ -115,9 +150,13 @@ class TableDecoder(BaseDecoder):
             )
 
         sampler = circuit.compile_detector_sampler(seed=seed)
-        det_obs_counts = np.zeros(2**data_len, dtype=_COUNT_DTYPE)
+        det_obs_counts = _empty_count_table(2**data_len, memmap_path=memmap_path)
 
-        decoder = cls(dem=dem, det_obs_counts=det_obs_counts)
+        decoder = cls(
+            dem=dem,
+            det_obs_counts=det_obs_counts,
+            step_counts_memmap_path=step_counts_memmap_path,
+        )
 
         progress_bar_steps = ((num_shots - 1) // step_size) + 1
         total_sampled = 0
@@ -144,12 +183,19 @@ class TableDecoder(BaseDecoder):
         cls,
         dem: stim.DetectorErrorModel,
         det_obs_shots: np.ndarray,
+        *,
+        memmap_path: str | PathLike[str] | None = None,
+        step_counts_memmap_path: str | PathLike[str] | None = None,
     ) -> TableDecoder:
         """Build a TableDecoder from pre-sampled detector-observable shots.
 
         Args:
             dem: The detector error model.
             det_obs_shots: Boolean array of shape (num_shots, D+L).
+            memmap_path: Optional path for memmapping the decoder's persistent
+                detector-observable count table.
+            step_counts_memmap_path: Optional path for memmapping the
+                temporary count table used while adding these shots.
 
         Returns:
             A TableDecoder with counts from the provided shots.
@@ -159,7 +205,8 @@ class TableDecoder(BaseDecoder):
         shape: int = 2 ** (num_detectors + num_observables)
         decoder = cls(
             dem=dem,
-            det_obs_counts=np.zeros(shape, dtype=_COUNT_DTYPE),
+            det_obs_counts=_empty_count_table(shape, memmap_path=memmap_path),
+            step_counts_memmap_path=step_counts_memmap_path,
         )
         decoder.update_det_obs_counts(det_obs_shots)
         return decoder
@@ -201,13 +248,33 @@ class TableDecoder(BaseDecoder):
                 f"Expected {data_len} columns (detectors + observables), "
                 f"got {det_obs_shots.shape[1]}"
             )
-        step_counts = shots_to_counts(det_obs_shots)
-        remaining = _COUNT_MAX - self._det_obs_counts
-        if np.any(step_counts > remaining):
-            raise OverflowError(
-                f"TableDecoder count table would exceed uint32 max ({_COUNT_MAX})."
+        step_counts = shots_to_counts(
+            det_obs_shots,
+            memmap_path=self._step_counts_memmap_path,
+            dtype=(
+                _COUNT_DTYPE if self._step_counts_memmap_path is not None else np.int64
+            ),
+        )
+        if isinstance(step_counts, np.memmap):
+            nonzero = np.flatnonzero(step_counts)
+            if len(nonzero) and np.any(
+                step_counts[nonzero] > (_COUNT_MAX - self._det_obs_counts[nonzero])
+            ):
+                raise OverflowError(
+                    f"TableDecoder count table would exceed uint32 max ({_COUNT_MAX})."
+                )
+            self._det_obs_counts[nonzero] += step_counts[nonzero].astype(
+                _COUNT_DTYPE, copy=False
             )
-        self._det_obs_counts += step_counts.astype(_COUNT_DTYPE, copy=False)
+        else:
+            remaining = _COUNT_MAX - self._det_obs_counts
+            if np.any(step_counts > remaining):
+                raise OverflowError(
+                    f"TableDecoder count table would exceed uint32 max ({_COUNT_MAX})."
+                )
+            self._det_obs_counts += step_counts.astype(_COUNT_DTYPE, copy=False)
+        if isinstance(self._det_obs_counts, np.memmap):
+            self._det_obs_counts.flush()
         self._is_cached_df = False
         self._is_cached_correction = False
 

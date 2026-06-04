@@ -35,3 +35,20 @@ def test_public_count_helpers_pack_detector_observable_shots():
     expected[5] = 1
     np.testing.assert_array_equal(counts, expected)
     np.testing.assert_array_equal(shots_to_counts(det_shots), np.array([1, 1, 0, 0]))
+
+
+def test_shots_to_counts_can_return_memmap(tmp_path):
+    shots = np.array(
+        [
+            [0, 0],
+            [1, 0],
+            [1, 0],
+            [0, 1],
+        ],
+        dtype=bool,
+    )
+
+    counts = shots_to_counts(shots, memmap_path=tmp_path / "counts.dat")
+
+    assert isinstance(counts, np.memmap)
+    np.testing.assert_array_equal(counts, np.array([1, 2, 1, 0], dtype=np.int64))
