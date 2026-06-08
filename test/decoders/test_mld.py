@@ -82,6 +82,22 @@ def test_mld_repetition():
     assert np.array_equal(correction, obs_shots)
 
 
+def test_from_dem_samples_detector_observable_counts():
+    dem = stim.DetectorErrorModel("error(1) D0 L0\n")
+    decoder = TableDecoder.from_dem(dem, num_shots=10, seed=123, step_size=3)
+
+    assert decoder.num_detectors == 1
+    assert decoder.num_observables == 1
+    assert np.array_equal(
+        decoder._det_obs_counts,
+        np.array([0, 0, 0, 10], dtype=np.uint32),
+    )
+    assert np.array_equal(
+        decoder.decode(np.array([[0], [1]], dtype=bool)),
+        np.array([[0], [1]], dtype=bool),
+    )
+
+
 def test_decode_obs_det_counts():
     dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
     decoder = TableDecoder(dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0]))

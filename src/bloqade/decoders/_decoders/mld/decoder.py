@@ -140,6 +140,72 @@ class TableDecoder(BaseDecoder):
         return decoder
 
     @classmethod
+    def from_dem(
+        cls,
+        dem: stim.DetectorErrorModel,
+        num_shots: int = 10**8,
+        seed: int | None = None,
+        step_size: int = 65536,
+    ) -> TableDecoder:
+        """Build a TableDecoder by sampling a detector error model.
+
+        Args:
+            dem: The detector error model to sample from.
+            num_shots: Number of detector-observable shots to sample.
+            seed: Optional random seed.
+            step_size: Number of shots per sampling batch.
+
+        Returns:
+            A TableDecoder with counts from the sampled detector error model.
+        """
+        try:
+            from tqdm import tqdm
+        except ImportError as e:
+            raise ImportError(
+                "The tqdm package is required for "
+                "TableDecoder.from_dem. "
+                'Install it via: pip install "tqdm"'
+            ) from e
+
+        num_observables = dem.num_observables
+        num_detectors = dem.num_detectors
+        data_len = num_observables + num_detectors
+        if data_len > 64:
+            raise ValueError(
+                f"Total data length {data_len} (detectors + observables) "
+                "exceeds 64 bits and cannot be packed into int64."
+            )
+
+        sampler = dem.compile_sampler(seed=seed)
+        det_obs_counts = np.zeros(2**data_len, dtype=_COUNT_DTYPE)
+        decoder = cls(dem=dem, det_obs_counts=det_obs_counts)
+
+        progress_bar_steps = ((num_shots - 1) // step_size) + 1
+        total_sampled = 0
+
+        logger.info("Building decoder from detector error model...")
+        for _ in tqdm(range(progress_bar_steps)):
+            next_shots = min(step_size, num_shots - total_sampled)
+            total_sampled += next_shots
+            det_samples, obs_samples, _ = sampler.sample(
+                shots=next_shots,
+                bit_packed=False,
+            )
+            if not isinstance(det_samples, np.ndarray):
+                raise RuntimeError(
+                    "Expected np.ndarray detector samples from sampler.sample, "
+                    f"got {type(det_samples)}"
+                )
+            if not isinstance(obs_samples, np.ndarray):
+                raise RuntimeError(
+                    "Expected np.ndarray observable samples from sampler.sample, "
+                    f"got {type(obs_samples)}"
+                )
+            det_obs_shots = np.concatenate([det_samples, obs_samples], axis=1)
+            decoder.update_det_obs_counts(det_obs_shots)
+        return decoder
+
+    @classmethod
     def from_det_obs_shots(
         cls,
         dem: stim.DetectorErrorModel,
