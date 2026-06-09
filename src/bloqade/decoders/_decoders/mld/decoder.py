@@ -46,6 +46,11 @@ class TableDecoder(BaseDecoder):
             detector-observable pattern frequencies.
     """
 
+    # TODO: change the implementation and have the det_obs_counts be optional
+    # (can also have the train function)
+    # TODO: have __init__ to just take in the DEM -- check in with Rafa? -- getting the interface for the decoders more
+    # uniform.
+    # __init__ takes in a bunch of keyword arguments (which are optional); the only required arg is DEM and always run the training.
     def __init__(
         self,
         dem: stim.DetectorErrorModel,
