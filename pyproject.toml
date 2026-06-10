@@ -1,6 +1,7 @@
 [project]
 name = "bloqade-decoders"
-version = "0.6.0-DEV"
+# NOTE: a hack for getting dependencies to resolve for AIST QET project
+version = "0.5.99.dev0"
 description = "Decoder related statements and interfaces for Bloqade."
 readme = "README.md"
 authors = [
