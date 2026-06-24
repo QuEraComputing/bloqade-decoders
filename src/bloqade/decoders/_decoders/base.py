@@ -25,3 +25,12 @@ class BaseDecoder(ABC):
             return self._decode(detector_bits)
         else:
             return np.stack([self._decode(row) for row in detector_bits])
+
+
+class ConfidenceDecoder(BaseDecoder):
+    @abstractmethod
+    def decode_with_confidence(
+        self, detector_bits: npt.NDArray[np.bool_]
+    ) -> tuple[npt.NDArray[np.bool_], np.float64]:
+        """Decode a single shot and return a scalar confidence score."""
+        pass

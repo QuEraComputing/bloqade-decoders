@@ -1,6 +1,6 @@
 from .mld import TableDecoder as TableDecoder
 from .mle import GurobiDecoder as GurobiDecoder
-from .base import BaseDecoder as BaseDecoder
+from .base import BaseDecoder as BaseDecoder, ConfidenceDecoder as ConfidenceDecoder
 from .ldpc import (
     BpLsdDecoder as BpLsdDecoder,
     BpOsdDecoder as BpOsdDecoder,

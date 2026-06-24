@@ -11,6 +11,21 @@ from .utils import shots_to_counts, pack_boolean_array, unpack_boolean_array
 
 logger = logging.getLogger(__name__)
 
+_COUNT_DTYPE = np.uint32
+_COUNT_MAX = np.iinfo(_COUNT_DTYPE).max
+
+
+def _as_count_table(counts: np.ndarray) -> npt.NDArray[np.uint32]:
+    """Coerce a detector-observable count table to the decoder storage dtype."""
+    arr = np.asarray(counts)
+    if np.any(arr < 0):
+        raise ValueError("det_obs_counts cannot contain negative counts.")
+    if np.any(arr > _COUNT_MAX):
+        raise OverflowError(
+            f"det_obs_counts contains a value larger than uint32 max ({_COUNT_MAX})."
+        )
+    return arr.astype(_COUNT_DTYPE, copy=False)
+
 
 class TableDecoder(BaseDecoder):
     """Maximum likelihood decoder from detector-observable lookup table.
@@ -45,7 +60,7 @@ class TableDecoder(BaseDecoder):
                 f"observables, got {det_obs_counts.shape}"
             )
         self._dem = dem
-        self._det_obs_counts = det_obs_counts
+        self._det_obs_counts = _as_count_table(det_obs_counts)
         self._df = None
         self._is_cached_df = False
         self._maximum_likelihood_correction: np.ndarray | None = None
@@ -100,7 +115,7 @@ class TableDecoder(BaseDecoder):
             )
 
         sampler = circuit.compile_detector_sampler(seed=seed)
-        det_obs_counts = np.zeros(2**data_len, dtype=int)
+        det_obs_counts = np.zeros(2**data_len, dtype=_COUNT_DTYPE)
 
         decoder = cls(dem=dem, det_obs_counts=det_obs_counts)
 
@@ -144,7 +159,7 @@ class TableDecoder(BaseDecoder):
         shape: int = 2 ** (num_detectors + num_observables)
         decoder = cls(
             dem=dem,
-            det_obs_counts=np.zeros(shape, dtype=int),
+            det_obs_counts=np.zeros(shape, dtype=_COUNT_DTYPE),
         )
         decoder.update_det_obs_counts(det_obs_shots)
         return decoder
@@ -187,7 +202,12 @@ class TableDecoder(BaseDecoder):
                 f"got {det_obs_shots.shape[1]}"
             )
         step_counts = shots_to_counts(det_obs_shots)
-        self._det_obs_counts += step_counts
+        remaining = _COUNT_MAX - self._det_obs_counts
+        if np.any(step_counts > remaining):
+            raise OverflowError(
+                f"TableDecoder count table would exceed uint32 max ({_COUNT_MAX})."
+            )
+        self._det_obs_counts += step_counts.astype(_COUNT_DTYPE, copy=False)
         self._is_cached_df = False
         self._is_cached_correction = False
 

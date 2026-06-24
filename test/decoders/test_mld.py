@@ -94,6 +94,23 @@ def test_decode_obs_det_counts():
     assert np.array_equal(decoded_det_obs_counts, np.array([0, 5, 6, 3, 4, 1, 2, 7]))
 
 
+def test_table_decoder_stores_counts_as_uint32():
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\n")
+    decoder = TableDecoder(dem, det_obs_counts=np.array([1, 0, 0, 1]))
+    assert decoder._det_obs_counts.dtype == np.uint32
+
+
+def test_table_decoder_raises_before_uint32_count_overflow():
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\n")
+    max_count = np.iinfo(np.uint32).max
+    decoder = TableDecoder(
+        dem,
+        det_obs_counts=np.array([max_count, 0, 0, 0], dtype=np.uint32),
+    )
+    with pytest.raises(OverflowError, match="uint32 max"):
+        decoder.update_det_obs_counts(np.array([[0, 0]], dtype=bool))
+
+
 def test_no_error_syndrome():
     dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
     decoder = TableDecoder(dem, det_obs_counts=np.array([81, 0, 0, 1, 0, 9, 9, 0]))
