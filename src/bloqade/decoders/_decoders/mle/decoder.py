@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import stim
 import numpy as np
@@ -8,6 +8,9 @@ import numpy.typing as npt
 from stim import DemInstruction
 
 from ..base import BaseDecoder
+
+if TYPE_CHECKING:
+    from gurobipy import Env as GurobiEnv
 
 
 class GurobiDecoder(BaseDecoder):
@@ -24,9 +27,9 @@ class GurobiDecoder(BaseDecoder):
         verbose: If True, print Gurobi solver output.
     """
 
-    _env: ClassVar[object | None] = None
+    _env: ClassVar[GurobiEnv | None] = None
 
-    def _instantiate(self, verbose: bool = False) -> None:
+    def _instantiate(self, verbose: bool = False, **_kwargs: Any) -> None:
         try:
             import gurobipy  # noqa: F401
         except ImportError as e:
@@ -150,7 +153,8 @@ class GurobiDecoder(BaseDecoder):
         if GurobiDecoder._env is None:
             GurobiDecoder._env = gp.Env()
         env = GurobiDecoder._env
-        env.setParam("OutputFlag", 1 if self._verbose else 0)  # type: ignore[union-attr]
+        assert env is not None
+        env.setParam("OutputFlag", 1 if self._verbose else 0)
 
         weights = self._weights
         detector_vertices = self._detector_vertices

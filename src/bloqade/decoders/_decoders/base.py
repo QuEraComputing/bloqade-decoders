@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import stim
 import numpy as np
@@ -9,14 +9,14 @@ DecoderT = TypeVar("DecoderT", bound="BaseDecoder")
 
 
 class BaseDecoder(ABC):
-    def __init__(self, dem: stim.DetectorErrorModel, **kwargs: object) -> None:
+    def __init__(self, dem: stim.DetectorErrorModel, **kwargs: Any) -> None:
         self.dem = dem
         self._instantiate(**kwargs)
         self.train(**kwargs)
 
     @classmethod
     def instantiate(
-        cls: type[DecoderT], dem: stim.DetectorErrorModel, **kwargs: object
+        cls: type[DecoderT], dem: stim.DetectorErrorModel, **kwargs: Any
     ) -> DecoderT:
         """Configure an untrained decoder from constructor keyword arguments."""
         decoder = cls.__new__(cls)
@@ -24,7 +24,7 @@ class BaseDecoder(ABC):
         decoder._instantiate(**kwargs)
         return decoder
 
-    def _instantiate(self, **kwargs: object) -> None:
+    def _instantiate(self, **kwargs: Any) -> None:
         """Configure the decoder from constructor keyword arguments."""
         pass
 
@@ -36,7 +36,7 @@ class BaseDecoder(ABC):
     def num_observables(self) -> int:
         return self.dem.num_observables
 
-    def train(self, **kwargs: object) -> None:
+    def train(self, **kwargs: Any) -> None:
         """Train the decoder.
 
         The default is a no-op for decoders that do not need training.

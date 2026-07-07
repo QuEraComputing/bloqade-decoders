@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -49,6 +49,7 @@ class BeliefFindDecoder(BaseDecoder):
         serial_schedule_order: list[int] | None = None,
         uf_method: Literal["inversion", "peeling"] = "inversion",
         bits_per_step: int = 0,
+        **_kwargs: Any,
     ):
         dem_matrix = detector_error_model_to_check_matrices(
             self.dem, allow_undecomposed_hyperedges=True
@@ -118,6 +119,7 @@ class BpLsdDecoder(BaseDecoder):
         bits_per_step: int = 0,
         lsd_order: int = 0,
         lsd_method: Literal["LSD_0", "LSD_E", "LSD_CS"] = "LSD_0",
+        **_kwargs: Any,
     ):
         dem_matrix = detector_error_model_to_check_matrices(
             self.dem, allow_undecomposed_hyperedges=True
@@ -183,6 +185,7 @@ class BpOsdDecoder(BaseDecoder):
         serial_schedule_order: list[int] | None = None,
         osd_method: Literal["OSD_0", "OSD_E", "OSD_CS"] = "OSD_0",
         osd_order: int = 0,
+        **_kwargs: Any,
     ):
         dem_matrix = detector_error_model_to_check_matrices(
             self.dem, allow_undecomposed_hyperedges=True

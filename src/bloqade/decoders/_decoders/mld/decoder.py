@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import numpy.typing as npt
 
@@ -50,6 +52,7 @@ class TableDecoder(BaseDecoder):
         self,
         *,
         num_shots: int = 10_000,
+        **_kwargs: Any,
     ) -> None:
         """Train the lookup table by sampling from the detector error model."""
         data_len = self.num_detectors + self.num_observables

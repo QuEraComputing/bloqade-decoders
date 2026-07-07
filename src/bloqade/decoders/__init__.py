@@ -1,3 +1,5 @@
+"""Decoder implementations and dialect helpers for Bloqade."""
+
 from . import dialects as dialects
 from ._decoders import (
     BaseDecoder as BaseDecoder,

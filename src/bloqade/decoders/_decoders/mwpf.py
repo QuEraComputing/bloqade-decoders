@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -31,6 +31,7 @@ class MWPFDecoder(BaseDecoder):
             "SolverSerialSingleHair",
         ] = "SolverSerialJointSingleHair",
         cluster_node_limit: int = 50,
+        **_kwargs: Any,
     ):
         try:
             from mwpf import SinterMWPFDecoder

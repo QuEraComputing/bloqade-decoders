@@ -22,7 +22,26 @@ repos:
   rev: "v0.15.7"
   hooks:
     - id: ruff
+      name: ruff (lint)
+    - id: ruff
+      name: ruff (docstrings)
+      args: [--select=D1, --ignore=D100]
+      files: ^src/
 - repo: https://github.com/crate-ci/typos
   rev: v1
   hooks:
     - id: typos
+- repo: local
+  hooks:
+    - id: pytest-check
+      name: pytest-check
+      entry: uv run --python 3.13 --all-extras pytest test
+      language: system
+      pass_filenames: false
+      always_run: true
+    - id: pyright-check
+      name: pyright-check
+      entry: uv run --python 3.13 --all-extras pyright src
+      language: system
+      pass_filenames: false
+      always_run: true

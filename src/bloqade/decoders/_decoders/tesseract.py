@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import numpy.typing as npt
 
@@ -57,6 +59,7 @@ class TesseractDecoder(BaseDecoder):
         pqlimit: int = 200_000,
         det_orders: list[list[int]] = [],
         det_penalty: float = 0.0,
+        **_kwargs: Any,
     ):
         try:
             import tesseract_decoder.tesseract as tesseract
