@@ -1,6 +1,5 @@
 from typing import Literal
 
-import stim
 import numpy as np
 import numpy.typing as npt
 
@@ -24,9 +23,8 @@ class MWPFDecoder(BaseDecoder):
             decoder performance. Default is 50.
     """
 
-    def __init__(
+    def _instantiate(
         self,
-        dem: stim.DetectorErrorModel,
         decoder_type: Literal[
             "SolverSerialJointSingleHair",
             "SolverSerialUnionFind",
@@ -42,12 +40,14 @@ class MWPFDecoder(BaseDecoder):
                 'You can install it via: pip install "mwpf[stim]"'
             ) from e
 
-        self._dem = dem
+        self._dem = self.dem
         self._sinter_decoder = SinterMWPFDecoder(
             decoder_type=decoder_type,
             cluster_node_limit=cluster_node_limit,
         )
-        self._compiled_decoder = self._sinter_decoder.compile_decoder_for_dem(dem=dem)
+        self._compiled_decoder = self._sinter_decoder.compile_decoder_for_dem(
+            dem=self.dem
+        )
 
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         bit_packed = np.packbits(np.array([detector_bits]), axis=-1, bitorder="little")

@@ -48,3 +48,11 @@ def test_decoder(decoder_cls, dem, syndromes, expected):
     decoder = decoder_cls(dem)
     result = decoder.decode(syndromes)
     np.testing.assert_array_equal(result, expected)
+
+
+def test_mwpf_decoder_can_instantiate_without_training():
+    decoder = MWPFDecoder.instantiate(space_error_dem)
+
+    result = decoder.decode(space_error_syndromes)
+
+    np.testing.assert_array_equal(result, expected_space_error_decoded_obs)
