@@ -102,17 +102,14 @@ decoder = GurobiDecoder(dem)
 corrections = decoder.decode(syndromes)
 ```
 
-The `TableDecoder` can be constructed directly with a DEM and pre-computed counts, or
-from a stim circuit which handles the sampling for you:
+The `TableDecoder` takes a DEM directly and trains by sampling from that DEM:
 
 ```python
 from bloqade.decoders import TableDecoder
 
-# from a circuit (samples shots to build the lookup table)
-decoder = TableDecoder.from_stim_circuit(circuit, num_shots=100_000)
-
-# or from pre-sampled detector-observable shots
-decoder = TableDecoder.from_det_obs_shots(dem, det_obs_shots)
+decoder = TableDecoder(dem)
+# or choose a training sample count
+decoder = TableDecoder(dem, num_shots=100_000)
 
 corrections = decoder.decode(syndromes)
 ```
