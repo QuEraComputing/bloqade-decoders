@@ -39,9 +39,8 @@ class BeliefFindDecoder(BaseDecoder):
             If not provided, this is set to the block length of the code.
     """
 
-    def __init__(
+    def _instantiate(
         self,
-        dem: stim.DetectorErrorModel,
         max_iter: int = 0,
         bp_method: Literal["product_sum", "minimum_sum"] = "minimum_sum",
         ms_scaling_factor: float = 1.0,
@@ -52,9 +51,9 @@ class BeliefFindDecoder(BaseDecoder):
         uf_method: Literal["inversion", "peeling"] = "inversion",
         bits_per_step: int = 0,
     ):
-        self._dem = dem
+        self._dem = self.dem
         dem_matrix = detector_error_model_to_check_matrices(
-            dem, allow_undecomposed_hyperedges=True
+            self.dem, allow_undecomposed_hyperedges=True
         )
         self._observable_matrix = dem_matrix.observables_matrix
 
