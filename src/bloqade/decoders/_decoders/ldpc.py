@@ -108,9 +108,8 @@ class BpLsdDecoder(BaseDecoder):
             by default 'LSD_0'.
     """
 
-    def __init__(
+    def _instantiate(
         self,
-        dem: stim.DetectorErrorModel,
         max_iter: int = 0,
         bp_method: Literal["product_sum", "minimum_sum"] = "minimum_sum",
         ms_scaling_factor: float = 1.0,
@@ -122,9 +121,9 @@ class BpLsdDecoder(BaseDecoder):
         lsd_order: int = 0,
         lsd_method: Literal["LSD_0", "LSD_E", "LSD_CS"] = "LSD_0",
     ):
-        self._dem = dem
+        self._dem = self.dem
         dem_matrix = detector_error_model_to_check_matrices(
-            dem, allow_undecomposed_hyperedges=True
+            self.dem, allow_undecomposed_hyperedges=True
         )
         self._observable_matrix = dem_matrix.observables_matrix
 
