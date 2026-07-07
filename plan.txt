@@ -1,0 +1,30 @@
+Issue #43 decoder API migration plan
+
+Keep this file during the migration and remove it in the final commit.
+
+1. Add the shared BaseDecoder API without migrating existing decoders.
+   - Constructor accepts the DEM as the only positional argument.
+   - BaseDecoder.instantiate(dem, **kwargs) creates an untrained decoder.
+   - Subclasses put setup code in _instantiate(**kwargs), not __init__.
+   - train(**kwargs) is a no-op by default.
+   - _decode and _decode_confidence are the single-shot hooks.
+   - decode and decode_confidence support both single-shot and batched inputs.
+
+2. Migrate one decoder per commit, running the tests after each commit.
+   - MWPFDecoder
+   - TesseractDecoder
+   - BeliefFindDecoder
+   - BpLsdDecoder
+   - BpOsdDecoder
+   - GurobiDecoder
+   - TableDecoder
+
+3. Keep tests as small user-facing examples.
+   - Prefer integration-style tests over mocks.
+   - Add confidence and batch API checks where they clarify behavior.
+   - Remove obsolete constructor or decode kwargs tests as APIs are removed.
+
+4. Final cleanup commit.
+   - Remove plan.txt.
+   - Update README examples if needed.
+   - Run the full test suite before opening the PR.
