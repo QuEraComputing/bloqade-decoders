@@ -2,12 +2,8 @@ import numpy as np
 import pytest
 
 from bloqade.decoders import (
-    MWPFDecoder,
-    BpLsdDecoder,
-    BpOsdDecoder,
-    GurobiDecoder,
-    TesseractDecoder,
-    BeliefFindDecoder,
+    BaseDecoder,
+    TableDecoder,
 )
 
 from .rep_code_ref import (
@@ -24,16 +20,18 @@ from .two_logical_ref import (
     two_logical_expected_decoded_obs,
 )
 
-# TableDecoder is excluded because it needs training data for meaningful
-# corrections.
-DECODERS = [
-    TesseractDecoder,
-    BeliefFindDecoder,
-    BpLsdDecoder,
-    BpOsdDecoder,
-    MWPFDecoder,
-    GurobiDecoder,
-]
+
+def _all_decoder_subclasses(decoder_cls):
+    subclasses = []
+    for subclass in decoder_cls.__subclasses__():
+        if subclass.__module__.startswith("bloqade.decoders._decoders."):
+            subclasses.append(subclass)
+        subclasses.extend(_all_decoder_subclasses(subclass))
+    return subclasses
+
+
+DECODERS = sorted(_all_decoder_subclasses(BaseDecoder), key=lambda cls: cls.__name__)
+NEEDS_TRAINING = [TableDecoder]
 
 TEST_CASES = [
     (space_error_dem, space_error_syndromes, expected_space_error_decoded_obs),
@@ -50,41 +48,11 @@ def test_decoder(decoder_cls, dem, syndromes, expected):
     np.testing.assert_array_equal(result, expected)
 
 
-def test_mwpf_decoder_can_instantiate_without_training():
-    decoder = MWPFDecoder.instantiate(space_error_dem)
+def test_decoders_can_instantiate_without_training():
+    for decoder_cls in DECODERS:
+        if decoder_cls in NEEDS_TRAINING:
+            continue
 
-    result = decoder.decode(space_error_syndromes)
-
-    np.testing.assert_array_equal(result, expected_space_error_decoded_obs)
-
-
-def test_tesseract_decoder_can_instantiate_without_training():
-    decoder = TesseractDecoder.instantiate(space_error_dem)
-
-    result = decoder.decode(space_error_syndromes)
-
-    np.testing.assert_array_equal(result, expected_space_error_decoded_obs)
-
-
-def test_belief_find_decoder_can_instantiate_without_training():
-    decoder = BeliefFindDecoder.instantiate(space_error_dem)
-
-    result = decoder.decode(space_error_syndromes)
-
-    np.testing.assert_array_equal(result, expected_space_error_decoded_obs)
-
-
-def test_bp_lsd_decoder_can_instantiate_without_training():
-    decoder = BpLsdDecoder.instantiate(space_error_dem)
-
-    result = decoder.decode(space_error_syndromes)
-
-    np.testing.assert_array_equal(result, expected_space_error_decoded_obs)
-
-
-def test_bp_osd_decoder_can_instantiate_without_training():
-    decoder = BpOsdDecoder.instantiate(space_error_dem)
-
-    result = decoder.decode(space_error_syndromes)
-
-    np.testing.assert_array_equal(result, expected_space_error_decoded_obs)
+        decoder = decoder_cls.instantiate(space_error_dem)
+        result = decoder.decode(space_error_syndromes)
+        np.testing.assert_array_equal(result, expected_space_error_decoded_obs)
