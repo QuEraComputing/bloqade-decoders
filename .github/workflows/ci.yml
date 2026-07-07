@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v7
@@ -30,10 +30,10 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
       - name: Install the project
-        run: uv sync --dev --all-extras
+        run: uv sync --python ${{ matrix.python-version }} --locked --dev --all-extras
       - name: Run tests
         # For example, using `pytest`
-        run: uv run just coverage
+        run: uv run --locked just coverage
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
