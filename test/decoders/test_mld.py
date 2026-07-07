@@ -99,9 +99,7 @@ def test_mld_repetition_samples_from_dem():
 
 def test_decode_obs_det_counts():
     dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
-    decoder = _trained_decoder_from_counts(
-        dem, np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    decoder = _trained_decoder_from_counts(dem, np.array([81, 0, 0, 1, 0, 9, 9, 0]))
     assert np.array_equal(
         decoder.decode(np.array([[0, 0], [0, 1], [1, 0], [1, 1]])),
         np.array([[0], [1], [1], [0]]),
@@ -113,18 +111,14 @@ def test_decode_obs_det_counts():
 
 def test_no_error_syndrome():
     dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
-    decoder = _trained_decoder_from_counts(
-        dem, np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    decoder = _trained_decoder_from_counts(dem, np.array([81, 0, 0, 1, 0, 9, 9, 0]))
     result = decoder.decode(np.array([[0, 0]]))
     assert np.array_equal(result, np.array([[0]]))
 
 
 def test_all_detectors_fired():
     dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
-    decoder = _trained_decoder_from_counts(
-        dem, np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    decoder = _trained_decoder_from_counts(dem, np.array([81, 0, 0, 1, 0, 9, 9, 0]))
     result = decoder.decode(np.array([[1, 1]]))
     assert result.shape == (1, 1)
 
@@ -132,9 +126,7 @@ def test_all_detectors_fired():
 def test_single_shot_decode():
     """Test _decode (single-shot) via the BaseDecoder interface."""
     dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
-    decoder = _trained_decoder_from_counts(
-        dem, np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    decoder = _trained_decoder_from_counts(dem, np.array([81, 0, 0, 1, 0, 9, 9, 0]))
     result = decoder.decode(np.array([0, 1], dtype=bool))
     assert result.ndim == 1
     assert np.array_equal(result, np.array([True]))
@@ -142,9 +134,7 @@ def test_single_shot_decode():
 
 def test_decode_confidence():
     dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
-    decoder = _trained_decoder_from_counts(
-        dem, np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    decoder = _trained_decoder_from_counts(dem, np.array([81, 0, 0, 1, 0, 9, 9, 0]))
 
     result, confidence = decoder.decode_confidence(np.array([[0, 1], [1, 0]]))
 
@@ -154,9 +144,7 @@ def test_decode_confidence():
 
 def test_single_shot_decode_confidence():
     dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
-    decoder = _trained_decoder_from_counts(
-        dem, np.array([81, 0, 0, 1, 0, 9, 9, 0])
-    )
+    decoder = _trained_decoder_from_counts(dem, np.array([81, 0, 0, 1, 0, 9, 9, 0]))
 
     result, confidence = decoder.decode_confidence(np.array([0, 1], dtype=bool))
 

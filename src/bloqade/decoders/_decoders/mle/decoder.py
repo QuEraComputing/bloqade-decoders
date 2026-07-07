@@ -108,9 +108,7 @@ class GurobiDecoder(BaseDecoder):
             )
 
         # Build observable indices (sized from DEM, not max seen index)
-        observable_indices: list[list[int]] = [
-            [] for _ in range(self.num_observables)
-        ]
+        observable_indices: list[list[int]] = [[] for _ in range(self.num_observables)]
         for e_idx, obs_targets in enumerate(hyperedge_obs):
             for obs_val in obs_targets:
                 observable_indices[obs_val].append(e_idx)
