@@ -50,7 +50,6 @@ class BeliefFindDecoder(BaseDecoder):
         uf_method: Literal["inversion", "peeling"] = "inversion",
         bits_per_step: int = 0,
     ):
-        self._dem = self.dem
         dem_matrix = detector_error_model_to_check_matrices(
             self.dem, allow_undecomposed_hyperedges=True
         )
@@ -120,7 +119,6 @@ class BpLsdDecoder(BaseDecoder):
         lsd_order: int = 0,
         lsd_method: Literal["LSD_0", "LSD_E", "LSD_CS"] = "LSD_0",
     ):
-        self._dem = self.dem
         dem_matrix = detector_error_model_to_check_matrices(
             self.dem, allow_undecomposed_hyperedges=True
         )
@@ -186,7 +184,6 @@ class BpOsdDecoder(BaseDecoder):
         osd_method: Literal["OSD_0", "OSD_E", "OSD_CS"] = "OSD_0",
         osd_order: int = 0,
     ):
-        self._dem = self.dem
         dem_matrix = detector_error_model_to_check_matrices(
             self.dem, allow_undecomposed_hyperedges=True
         )

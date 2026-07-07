@@ -44,7 +44,7 @@ class GurobiDecoder(BaseDecoder):
             ) from e
 
         self._verbose = verbose
-        self._dem = self.dem.flattened()
+        self._flat_dem = self.dem.flattened()
         self._check_no_separators(self.dem)
 
         import scipy.sparse
@@ -59,7 +59,7 @@ class GurobiDecoder(BaseDecoder):
         certain_det_flip = np.zeros(self.num_detectors, dtype=int)
         certain_obs_flip = np.zeros(self.num_observables, dtype=int)
 
-        for instruction in self._dem:  # type: ignore[union-attr]
+        for instruction in self._flat_dem:  # type: ignore[union-attr]
             if not isinstance(instruction, DemInstruction):
                 raise Exception(
                     "The detector-error model should be already flattened. But still got DemRepeatBlock."

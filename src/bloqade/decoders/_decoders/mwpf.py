@@ -40,7 +40,6 @@ class MWPFDecoder(BaseDecoder):
                 'You can install it via: pip install "mwpf[stim]"'
             ) from e
 
-        self._dem = self.dem
         self._sinter_decoder = SinterMWPFDecoder(
             decoder_type=decoder_type,
             cluster_node_limit=cluster_node_limit,

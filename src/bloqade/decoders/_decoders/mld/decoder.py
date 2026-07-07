@@ -23,7 +23,6 @@ class TableDecoder(BaseDecoder):
     """
 
     def _instantiate(self, **kwargs: object) -> None:
-        self._dem = self.dem
         self._det_obs_counts = np.zeros(self._det_obs_counts_len(), dtype=int)
         self._df = None
         self._is_cached_df = False

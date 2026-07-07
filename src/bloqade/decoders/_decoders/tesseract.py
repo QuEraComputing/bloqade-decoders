@@ -69,7 +69,6 @@ class TesseractDecoder(BaseDecoder):
         if det_beam is None:
             det_beam = tesseract.INF_DET_BEAM
 
-        self._dem = self.dem
         self._config = tesseract.TesseractConfig(
             dem=self.dem,
             det_beam=det_beam,
