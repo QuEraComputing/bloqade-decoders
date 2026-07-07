@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, cast
+from typing import TYPE_CHECKING, Literal, ClassVar, cast, overload
 
 import stim
 import numpy as np
@@ -8,6 +8,9 @@ import numpy.typing as npt
 from stim import DemInstruction
 
 from ..base import BaseDecoder
+
+if TYPE_CHECKING:
+    from gurobipy import Env as GurobiEnv
 
 
 class GurobiDecoder(BaseDecoder):
@@ -23,7 +26,7 @@ class GurobiDecoder(BaseDecoder):
         dem: The detector error model describing the error structure.
     """
 
-    _env: ClassVar[object | None] = None
+    _env: ClassVar[GurobiEnv | None] = None
 
     def __init__(self, dem: stim.DetectorErrorModel) -> None:
         try:
@@ -157,7 +160,8 @@ class GurobiDecoder(BaseDecoder):
         if GurobiDecoder._env is None:
             GurobiDecoder._env = gp.Env()
         env = GurobiDecoder._env
-        env.setParam("OutputFlag", 1 if verbose else 0)  # type: ignore[union-attr]
+        assert env is not None
+        env.setParam("OutputFlag", 1 if verbose else 0)
 
         weights = self._weights
         detector_vertices = self._detector_vertices
@@ -224,6 +228,30 @@ class GurobiDecoder(BaseDecoder):
         errors = self.decode_error(det_2d)
         obs = self.logical_from_error(errors)
         return obs[0].astype(np.bool_)
+
+    @overload
+    def decode(
+        self,
+        detector_bits: npt.NDArray[np.bool_],
+        verbose: bool = False,
+        return_weights: Literal[False] = False,
+    ) -> npt.NDArray[np.bool_]: ...
+
+    @overload
+    def decode(
+        self,
+        detector_bits: npt.NDArray[np.bool_],
+        verbose: bool,
+        return_weights: Literal[True],
+    ) -> tuple[npt.NDArray[np.bool_], np.ndarray]: ...
+
+    @overload
+    def decode(
+        self,
+        detector_bits: npt.NDArray[np.bool_],
+        verbose: bool = False,
+        return_weights: bool = False,
+    ) -> npt.NDArray[np.bool_] | tuple[npt.NDArray[np.bool_], np.ndarray]: ...
 
     def decode(
         self,

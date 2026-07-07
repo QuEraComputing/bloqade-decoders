@@ -1,3 +1,5 @@
+"""Annotation dialect for decoder measurement metadata."""
+
 from . import stmts as stmts, types as types
 from ._dialect import dialect as dialect
 from ._interface import (

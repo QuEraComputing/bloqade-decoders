@@ -19,3 +19,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: psf/black@stable
+  pyright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.8.4"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: Install the project
+        run: uv sync --all-extras --dev
+      - run: echo "$PWD/.venv/bin" >> $GITHUB_PATH
+      - uses: jakebailey/pyright-action@v3
+        with:
+          pylance-version: latest-release
