@@ -80,3 +80,11 @@ def test_bp_lsd_decoder_can_instantiate_without_training():
     result = decoder.decode(space_error_syndromes)
 
     np.testing.assert_array_equal(result, expected_space_error_decoded_obs)
+
+
+def test_bp_osd_decoder_can_instantiate_without_training():
+    decoder = BpOsdDecoder.instantiate(space_error_dem)
+
+    result = decoder.decode(space_error_syndromes)
+
+    np.testing.assert_array_equal(result, expected_space_error_decoded_obs)

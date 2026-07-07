@@ -1,6 +1,5 @@
 from typing import Literal
 
-import stim
 import numpy as np
 import numpy.typing as npt
 from beliefmatching import detector_error_model_to_check_matrices
@@ -175,9 +174,8 @@ class BpOsdDecoder(BaseDecoder):
         osd_order (int): The OSD order, by default 0.
     """
 
-    def __init__(
+    def _instantiate(
         self,
-        dem: stim.DetectorErrorModel,
         max_iter: int = 0,
         bp_method: Literal["product_sum", "minimum_sum"] = "minimum_sum",
         ms_scaling_factor: float = 1.0,
@@ -188,9 +186,9 @@ class BpOsdDecoder(BaseDecoder):
         osd_method: Literal["OSD_0", "OSD_E", "OSD_CS"] = "OSD_0",
         osd_order: int = 0,
     ):
-        self._dem = dem
+        self._dem = self.dem
         dem_matrix = detector_error_model_to_check_matrices(
-            dem, allow_undecomposed_hyperedges=True
+            self.dem, allow_undecomposed_hyperedges=True
         )
         self._observable_matrix = dem_matrix.observables_matrix
 
