@@ -67,21 +67,23 @@ def test_hyper():
     assert (obs_shots == result).all()
 
 
-def test_decode_returns_weights():
+def test_weight_from_error():
     dem = regular_dem()
     det_shots, _ = regular_samples()
     decoder = GurobiDecoder(dem)
-    obs, weights = decoder.decode(det_shots, return_weights=True)
+    errors = decoder._decode_error(det_shots)
+    obs = decoder.logical_from_error(errors)
+    weights = decoder.weight_from_error(errors)
     assert obs.shape == (2, 1)
     assert weights.shape == (2,)
     assert np.all(weights < 0)
 
 
-def test_decode_error_shape():
+def test_private_decode_error_shape():
     dem = regular_dem()
     det_shots, _ = regular_samples()
     decoder = GurobiDecoder(dem)
-    errors = decoder.decode_error(det_shots)
+    errors = decoder._decode_error(det_shots)
     assert errors.shape == (2, 10)
     assert errors.dtype == bool
 
@@ -90,7 +92,7 @@ def test_logical_from_error():
     dem = regular_dem()
     det_shots, obs_shots = regular_samples()
     decoder = GurobiDecoder(dem)
-    errors = decoder.decode_error(det_shots)
+    errors = decoder._decode_error(det_shots)
     logicals = decoder.logical_from_error(errors)
     assert np.array_equal(logicals, obs_shots)
 
@@ -111,6 +113,28 @@ def test_single_shot_decode():
     result = decoder.decode(det_shots)
     assert result.ndim == 1
     assert np.array_equal(result, np.array([True]))
+
+
+def test_decode_confidence():
+    dem = regular_dem()
+    det_shots, obs_shots = regular_samples()
+    decoder = GurobiDecoder(dem)
+
+    result, confidence = decoder.decode_confidence(det_shots)
+
+    np.testing.assert_array_equal(result, obs_shots)
+    np.testing.assert_array_equal(confidence, np.array([1.0, 1.0]))
+
+
+def test_single_shot_decode_confidence():
+    dem = regular_dem()
+    det_shots = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 1], dtype=bool)
+    decoder = GurobiDecoder(dem)
+
+    result, confidence = decoder.decode_confidence(det_shots)
+
+    assert confidence == 1.0
+    np.testing.assert_array_equal(result, np.array([True]))
 
 
 # --- SinterGurobiDecoder tests ---
@@ -200,15 +224,16 @@ def test_sinter_collect_gurobi():
     assert stats[0].errors < 50
 
 
-def test_single_shot_decode_with_weights():
-    """Single-shot decode with return_weights=True."""
+def test_single_shot_weight_from_error():
     dem = regular_dem()
     det_shots = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 1], dtype=bool)
     decoder = GurobiDecoder(dem)
-    obs, weights = decoder.decode(det_shots, return_weights=True)
+    errors = decoder._decode_error(det_shots.reshape(1, -1))
+    obs = decoder.logical_from_error(errors)[0]
+    weights = decoder.weight_from_error(errors)
     assert obs.ndim == 1
     assert np.array_equal(obs, np.array([True]))
-    assert isinstance(weights, np.ndarray)
+    assert weights.shape == (1,)
 
 
 def test_separator_targets_rejected():
@@ -218,6 +243,16 @@ def test_separator_targets_rejected():
         """)
     with pytest.raises(ValueError, match="separator"):
         GurobiDecoder(dem)
+
+
+def test_gurobi_decoder_can_instantiate_without_training():
+    dem = regular_dem()
+    det_shots, obs_shots = regular_samples()
+
+    decoder = GurobiDecoder.instantiate(dem)
+    result = decoder.decode(det_shots)
+
+    np.testing.assert_array_equal(result, obs_shots)
 
 
 def test_multi_observable_dem():
