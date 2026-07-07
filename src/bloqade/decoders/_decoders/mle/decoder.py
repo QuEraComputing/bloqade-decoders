@@ -56,8 +56,8 @@ class GurobiDecoder(BaseDecoder):
         hyperedge_obs: list[list[int]] = []
 
         # Track errors with probability 1.0 (always fire)
-        certain_det_flip = np.zeros(self.dem.num_detectors, dtype=int)
-        certain_obs_flip = np.zeros(self.dem.num_observables, dtype=int)
+        certain_det_flip = np.zeros(self.num_detectors, dtype=int)
+        certain_obs_flip = np.zeros(self.num_observables, dtype=int)
 
         for instruction in self._dem:  # type: ignore[union-attr]
             if not isinstance(instruction, DemInstruction):
@@ -94,7 +94,7 @@ class GurobiDecoder(BaseDecoder):
 
         # Build hyperedges matrix and detector vertices
         hyperedges_matrix = scipy.sparse.lil_matrix(
-            (len(weights), self.dem.num_detectors), dtype=bool
+            (len(weights), self.num_detectors), dtype=bool
         )
         for row_idx, det_targets in enumerate(hyperedge_dets):
             targets_arr = np.asarray(det_targets)
@@ -109,7 +109,7 @@ class GurobiDecoder(BaseDecoder):
 
         # Build observable indices (sized from DEM, not max seen index)
         observable_indices: list[list[int]] = [
-            [] for _ in range(self.dem.num_observables)
+            [] for _ in range(self.num_observables)
         ]
         for e_idx, obs_targets in enumerate(hyperedge_obs):
             for obs_val in obs_targets:
@@ -137,14 +137,6 @@ class GurobiDecoder(BaseDecoder):
                             "detector_error_model(decompose_errors=False)"
                             " instead."
                         )
-
-    @property
-    def num_detectors(self) -> int:
-        return self._dem.num_detectors
-
-    @property
-    def num_observables(self) -> int:
-        return self._dem.num_observables
 
     def weight_from_error(self, error: np.ndarray) -> np.ndarray:
         return np.sum(error * self._weights, axis=1)

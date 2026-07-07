@@ -47,14 +47,6 @@ class TableDecoder(BaseDecoder):
         self._maximum_likelihood_correction: np.ndarray | None = None
         self._is_cached_correction = False
 
-    @property
-    def num_detectors(self) -> int:
-        return self._dem.num_detectors
-
-    @property
-    def num_observables(self) -> int:
-        return self._dem.num_observables
-
     def train(
         self,
         *,

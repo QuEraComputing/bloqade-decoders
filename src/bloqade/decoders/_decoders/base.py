@@ -28,6 +28,14 @@ class BaseDecoder(ABC):
         """Configure the decoder from constructor keyword arguments."""
         pass
 
+    @property
+    def num_detectors(self) -> int:
+        return self.dem.num_detectors
+
+    @property
+    def num_observables(self) -> int:
+        return self.dem.num_observables
+
     def train(self, **kwargs: object) -> None:
         """Train the decoder.
 
@@ -50,7 +58,7 @@ class BaseDecoder(ABC):
         if detector_bits.ndim == 1:
             return self._decode(detector_bits)
         if len(detector_bits) == 0:
-            return np.empty((0, self.dem.num_observables), dtype=np.bool_)
+            return np.empty((0, self.num_observables), dtype=np.bool_)
         return np.stack([self._decode(row) for row in detector_bits])
 
     def _decode_confidence(
@@ -77,7 +85,7 @@ class BaseDecoder(ABC):
             return self._decode_confidence(detector_bits)
         if len(detector_bits) == 0:
             return (
-                np.empty((0, self.dem.num_observables), dtype=np.bool_),
+                np.empty((0, self.num_observables), dtype=np.bool_),
                 np.empty(0, dtype=np.float64),
             )
         corrections, confidences = zip(
