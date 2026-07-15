@@ -159,9 +159,16 @@ class TableDecoder(BaseDecoder):
     ) -> tuple[npt.NDArray[np.bool_], float | npt.NDArray[np.float64]]:
         """Decode detector bits with the default confidence score."""
         result = self.decode(detector_bits)
+        counts_by_observable_and_syndrome = self._det_obs_counts.reshape(
+            2**self.num_observables, 2**self.num_detectors
+        )
+        packed = pack_boolean_array(detector_bits.reshape(-1, self.num_detectors))
+        confidence = (
+            counts_by_observable_and_syndrome[:, packed].sum(axis=0) > 0
+        ).astype(np.float64)
         if detector_bits.ndim == 1:
-            return result, 1.0
-        return result, np.ones(len(detector_bits), dtype=np.float64)
+            return result, float(confidence[0])
+        return result, confidence
 
     def decode_det_obs_counts(self, raw_det_obs_counts: np.ndarray) -> np.ndarray:
         """Decode raw detector-observable counts.
