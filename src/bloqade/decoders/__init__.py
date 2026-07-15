@@ -1,3 +1,5 @@
+"""Decoder implementations and shared Kirin dialects for the Bloqade toolchain."""
+
 from . import dialects as dialects
 from ._decoders import (
     BaseDecoder as BaseDecoder,

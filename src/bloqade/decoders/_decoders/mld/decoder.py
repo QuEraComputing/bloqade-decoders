@@ -1,15 +1,10 @@
-from __future__ import annotations
+from typing import Any
 
-import logging
-
-import stim
 import numpy as np
 import numpy.typing as npt
 
 from ..base import BaseDecoder
 from .utils import shots_to_counts, pack_boolean_array, unpack_boolean_array
-
-logger = logging.getLogger(__name__)
 
 
 class TableDecoder(BaseDecoder):
@@ -27,127 +22,58 @@ class TableDecoder(BaseDecoder):
 
     Args:
         dem: The detector error model.
-        det_obs_counts: Array of shape ``(2**(D+L),)`` counting
-            detector-observable pattern frequencies.
     """
 
-    def __init__(
-        self,
-        dem: stim.DetectorErrorModel,
-        det_obs_counts: np.ndarray,
-    ) -> None:
-        super().__init__(dem)
-        expected_len = 2 ** (dem.num_detectors + dem.num_observables)
-        if det_obs_counts.shape != (expected_len,):
-            raise ValueError(
-                f"det_obs_counts must have shape ({expected_len},) for "
-                f"{dem.num_detectors} detectors and {dem.num_observables} "
-                f"observables, got {det_obs_counts.shape}"
-            )
-        self._dem = dem
-        self._det_obs_counts = det_obs_counts
+    def _instantiate(self, **kwargs: object) -> None:
+        self._det_obs_counts = np.zeros(self._det_obs_counts_len(), dtype=int)
         self._df = None
         self._is_cached_df = False
         self._maximum_likelihood_correction: np.ndarray | None = None
         self._is_cached_correction = False
 
-    @property
-    def num_detectors(self) -> int:
-        return self._dem.num_detectors
+    def _det_obs_counts_len(self) -> int:
+        return 2 ** (self.num_detectors + self.num_observables)
 
-    @property
-    def num_observables(self) -> int:
-        return self._dem.num_observables
+    def _set_det_obs_counts(self, det_obs_counts: np.ndarray) -> None:
+        expected_len = self._det_obs_counts_len()
+        if det_obs_counts.shape != (expected_len,):
+            raise ValueError(
+                f"det_obs_counts must have shape ({expected_len},) for "
+                f"{self.num_detectors} detectors and {self.num_observables} "
+                f"observables, got {det_obs_counts.shape}"
+            )
+        self._det_obs_counts = det_obs_counts.copy()
+        self._df = None
+        self._is_cached_df = False
+        self._maximum_likelihood_correction: np.ndarray | None = None
+        self._is_cached_correction = False
 
-    @classmethod
-    def from_stim_circuit(
-        cls,
-        circuit: stim.Circuit,
-        num_shots: int = 10**8,
-        seed: int | None = None,
-        step_size: int = 65536,
-    ) -> TableDecoder:
-        """Build a TableDecoder by sampling a stim circuit.
+    def train(
+        self,
+        *,
+        num_shots: int = 10_000,
+        **_kwargs: Any,
+    ) -> None:
+        """Replace the lookup table with counts sampled from the error model.
+
+        Any detector-observable counts previously collected with
+        :meth:`update_det_obs_counts` are discarded.
 
         Args:
-            circuit: The stim circuit to sample from.
-            num_shots: Number of shots to sample.
-            seed: Optional random seed.
-            step_size: Number of shots per sampling batch.
-
-        Returns:
-            A TableDecoder with counts from the sampled shots.
+            num_shots: Number of detector-observable samples to collect.
         """
-        try:
-            from tqdm import tqdm
-        except ImportError as e:
-            raise ImportError(
-                "The tqdm package is required for "
-                "TableDecoder.from_stim_circuit. "
-                'Install it via: pip install "tqdm"'
-            ) from e
-
-        dem = circuit.detector_error_model(
-            decompose_errors=False, approximate_disjoint_errors=True
-        )
-        num_observables = dem.num_observables
-        num_detectors = dem.num_detectors
-        data_len = num_observables + num_detectors
+        data_len = self.num_detectors + self.num_observables
         if data_len > 64:
             raise ValueError(
                 f"Total data length {data_len} (detectors + observables) "
                 "exceeds 64 bits and cannot be packed into int64."
             )
 
-        sampler = circuit.compile_detector_sampler(seed=seed)
-        det_obs_counts = np.zeros(2**data_len, dtype=int)
-
-        decoder = cls(dem=dem, det_obs_counts=det_obs_counts)
-
-        progress_bar_steps = ((num_shots - 1) // step_size) + 1
-        total_sampled = 0
-
-        logger.info("Building decoder...")
-        for _ in tqdm(range(progress_bar_steps)):
-            next_shots = min(step_size, num_shots - total_sampled)
-            total_sampled += next_shots
-            det_obs_shots = sampler.sample(
-                next_shots,
-                separate_observables=False,
-                append_observables=True,
-            )
-            if not isinstance(det_obs_shots, np.ndarray):
-                raise RuntimeError(
-                    "Expected np.ndarray from sampler.sample, "
-                    f"got {type(det_obs_shots)}"
-                )
-            decoder.update_det_obs_counts(det_obs_shots)
-        return decoder
-
-    @classmethod
-    def from_det_obs_shots(
-        cls,
-        dem: stim.DetectorErrorModel,
-        det_obs_shots: np.ndarray,
-    ) -> TableDecoder:
-        """Build a TableDecoder from pre-sampled detector-observable shots.
-
-        Args:
-            dem: The detector error model.
-            det_obs_shots: Boolean array of shape (num_shots, D+L).
-
-        Returns:
-            A TableDecoder with counts from the provided shots.
-        """
-        num_detectors = dem.num_detectors
-        num_observables = dem.num_observables
-        shape: int = 2 ** (num_detectors + num_observables)
-        decoder = cls(
-            dem=dem,
-            det_obs_counts=np.zeros(shape, dtype=int),
-        )
-        decoder.update_det_obs_counts(det_obs_shots)
-        return decoder
+        sampler = self.dem.compile_sampler()
+        det_data, obs_data, _ = sampler.sample(num_shots)
+        det_obs_shots = np.concatenate([det_data, obs_data], axis=1)
+        self._set_det_obs_counts(np.zeros(self._det_obs_counts_len(), dtype=int))
+        self.update_det_obs_counts(det_obs_shots)
 
     @property
     def det_obs_dataframe(self):  # type: ignore[no-untyped-def]
@@ -227,6 +153,15 @@ class TableDecoder(BaseDecoder):
         packed_det_shots = pack_boolean_array(detector_bits)
         packed_correction = self._maximum_likelihood_correction[packed_det_shots]
         return unpack_boolean_array(packed_correction, self.num_observables)
+
+    def decode_confidence(
+        self, detector_bits: npt.NDArray[np.bool_]
+    ) -> tuple[npt.NDArray[np.bool_], float | npt.NDArray[np.float64]]:
+        """Decode detector bits with the default confidence score."""
+        result = self.decode(detector_bits)
+        if detector_bits.ndim == 1:
+            return result, 1.0
+        return result, np.ones(len(detector_bits), dtype=np.float64)
 
     def decode_det_obs_counts(self, raw_det_obs_counts: np.ndarray) -> np.ndarray:
         """Decode raw detector-observable counts.

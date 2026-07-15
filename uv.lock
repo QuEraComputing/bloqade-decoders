@@ -86,7 +86,7 @@ wheels = [
 
 [[package]]
 name = "bloqade-decoders"
-version = "0.6.0.dev0"
+version = "0.7.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "beliefmatching" },

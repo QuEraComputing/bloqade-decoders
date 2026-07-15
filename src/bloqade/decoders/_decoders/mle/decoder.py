@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import stim
 import numpy as np
@@ -8,6 +8,9 @@ import numpy.typing as npt
 from stim import DemInstruction
 
 from ..base import BaseDecoder
+
+if TYPE_CHECKING:
+    from gurobipy import Env as GurobiEnv
 
 
 class GurobiDecoder(BaseDecoder):
@@ -21,11 +24,12 @@ class GurobiDecoder(BaseDecoder):
 
     Args:
         dem: The detector error model describing the error structure.
+        verbose: If True, print Gurobi solver output.
     """
 
-    _env: ClassVar[object | None] = None
+    _env: ClassVar[GurobiEnv | None] = None
 
-    def __init__(self, dem: stim.DetectorErrorModel) -> None:
+    def _instantiate(self, verbose: bool = False, **_kwargs: Any) -> None:
         try:
             import gurobipy  # noqa: F401
         except ImportError as e:
@@ -42,9 +46,9 @@ class GurobiDecoder(BaseDecoder):
                 'You can install it via: pip install "scipy"'
             ) from e
 
-        super().__init__(dem)
-        self._dem = dem.flattened()
-        self._check_no_separators(dem)
+        self._verbose = verbose
+        self._flat_dem = self.dem.flattened()
+        self._check_no_separators(self.dem)
 
         import scipy.sparse
 
@@ -55,10 +59,10 @@ class GurobiDecoder(BaseDecoder):
         hyperedge_obs: list[list[int]] = []
 
         # Track errors with probability 1.0 (always fire)
-        certain_det_flip = np.zeros(dem.num_detectors, dtype=int)
-        certain_obs_flip = np.zeros(dem.num_observables, dtype=int)
+        certain_det_flip = np.zeros(self.num_detectors, dtype=int)
+        certain_obs_flip = np.zeros(self.num_observables, dtype=int)
 
-        for instruction in self._dem:  # type: ignore[union-attr]
+        for instruction in self._flat_dem:  # type: ignore[union-attr]
             if not isinstance(instruction, DemInstruction):
                 raise Exception(
                     "The detector-error model should be already flattened. But still got DemRepeatBlock."
@@ -93,7 +97,7 @@ class GurobiDecoder(BaseDecoder):
 
         # Build hyperedges matrix and detector vertices
         hyperedges_matrix = scipy.sparse.lil_matrix(
-            (len(weights), dem.num_detectors), dtype=bool
+            (len(weights), self.num_detectors), dtype=bool
         )
         for row_idx, det_targets in enumerate(hyperedge_dets):
             targets_arr = np.asarray(det_targets)
@@ -107,7 +111,7 @@ class GurobiDecoder(BaseDecoder):
             )
 
         # Build observable indices (sized from DEM, not max seen index)
-        observable_indices: list[list[int]] = [[] for _ in range(dem.num_observables)]
+        observable_indices: list[list[int]] = [[] for _ in range(self.num_observables)]
         for e_idx, obs_targets in enumerate(hyperedge_obs):
             for obs_val in obs_targets:
                 observable_indices[obs_val].append(e_idx)
@@ -135,18 +139,10 @@ class GurobiDecoder(BaseDecoder):
                             " instead."
                         )
 
-    @property
-    def num_detectors(self) -> int:
-        return self._dem.num_detectors
-
-    @property
-    def num_observables(self) -> int:
-        return self._dem.num_observables
-
     def weight_from_error(self, error: np.ndarray) -> np.ndarray:
         return np.sum(error * self._weights, axis=1)
 
-    def decode_error(self, det_shots: np.ndarray, verbose: bool = False) -> np.ndarray:
+    def _decode_error(self, det_shots: np.ndarray) -> np.ndarray:
         import gurobipy as gp
         from gurobipy import GRB
 
@@ -157,7 +153,8 @@ class GurobiDecoder(BaseDecoder):
         if GurobiDecoder._env is None:
             GurobiDecoder._env = gp.Env()
         env = GurobiDecoder._env
-        env.setParam("OutputFlag", 1 if verbose else 0)  # type: ignore[union-attr]
+        assert env is not None
+        env.setParam("OutputFlag", 1 if self._verbose else 0)
 
         weights = self._weights
         detector_vertices = self._detector_vertices
@@ -192,7 +189,7 @@ class GurobiDecoder(BaseDecoder):
 
             m.optimize()
             if m.status != GRB.OPTIMAL:
-                if verbose:
+                if self._verbose:
                     print("Did not find optimal solution", m.status)
                 m.close()
                 raise RuntimeError(
@@ -221,35 +218,22 @@ class GurobiDecoder(BaseDecoder):
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a single shot of detector bits."""
         det_2d = detector_bits.reshape(1, -1)
-        errors = self.decode_error(det_2d)
+        errors = self._decode_error(det_2d)
         obs = self.logical_from_error(errors)
         return obs[0].astype(np.bool_)
 
-    def decode(
-        self,
-        detector_bits: npt.NDArray[np.bool_],
-        verbose: bool = False,
-        return_weights: bool = False,
-    ) -> npt.NDArray[np.bool_] | tuple[npt.NDArray[np.bool_], np.ndarray]:
-        """Decode detector bits, optionally returning weights.
-
-        Args:
-            detector_bits: 1D (single shot) or 2D (batch) boolean array.
-            verbose: If True, print Gurobi solver output.
-            return_weights: If True, return (observable_corrections, weights).
-
-        Returns:
-            Observable corrections, or (corrections, weights) tuple.
-        """
+    def decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
+        """Decode a batch or single shot of detector bits."""
         if detector_bits.ndim == 1:
-            det_2d = detector_bits.reshape(1, -1)
-            errors = self.decode_error(det_2d, verbose)
-            obs = self.logical_from_error(errors)
-            if return_weights:
-                return obs[0].astype(np.bool_), self.weight_from_error(errors)
-            return obs[0].astype(np.bool_)
-        decoded_errors = self.decode_error(detector_bits, verbose)
-        decoded_obs = self.logical_from_error(decoded_errors)
-        if return_weights:
-            return decoded_obs, self.weight_from_error(decoded_errors)
-        return decoded_obs
+            return self._decode(detector_bits)
+        errors = self._decode_error(detector_bits)
+        return self.logical_from_error(errors)
+
+    def decode_confidence(
+        self, detector_bits: npt.NDArray[np.bool_]
+    ) -> tuple[npt.NDArray[np.bool_], float | npt.NDArray[np.float64]]:
+        """Decode detector bits with the default confidence score."""
+        result = self.decode(detector_bits)
+        if detector_bits.ndim == 1:
+            return result, 1.0
+        return result, np.ones(len(detector_bits), dtype=np.float64)

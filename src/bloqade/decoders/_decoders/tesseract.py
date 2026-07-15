@@ -1,4 +1,5 @@
-import stim
+from typing import Any
+
 import numpy as np
 import numpy.typing as npt
 
@@ -49,9 +50,8 @@ class TesseractDecoder(BaseDecoder):
             complete solutions. Default is 0.0 (no penalty).
     """
 
-    def __init__(
+    def _instantiate(
         self,
-        dem: stim.DetectorErrorModel,
         det_beam: int | None = None,
         beam_climbing: bool = False,
         no_revisit_dets: bool = False,
@@ -59,6 +59,7 @@ class TesseractDecoder(BaseDecoder):
         pqlimit: int = 200_000,
         det_orders: list[list[int]] = [],
         det_penalty: float = 0.0,
+        **_kwargs: Any,
     ):
         try:
             import tesseract_decoder.tesseract as tesseract
@@ -71,9 +72,8 @@ class TesseractDecoder(BaseDecoder):
         if det_beam is None:
             det_beam = tesseract.INF_DET_BEAM
 
-        self._dem = dem
         self._config = tesseract.TesseractConfig(
-            dem=dem,
+            dem=self.dem,
             det_beam=det_beam,
             beam_climbing=beam_climbing,
             no_revisit_dets=no_revisit_dets,

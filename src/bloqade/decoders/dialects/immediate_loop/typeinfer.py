@@ -9,6 +9,7 @@ from ._dialect import dialect
 
 @dialect.register(key="typeinfer")
 class TypeInfer(MethodTable):
+    """Infer result types for immediate-loop statements."""
 
     @impl(Repeat)
     def repeat(
@@ -17,6 +18,7 @@ class TypeInfer(MethodTable):
         frame: Frame[types.TypeAttribute],
         stmt: Repeat,
     ):
+        """Propagate a repeated method's return type to the resulting list."""
         method = interp.maybe_const(stmt.method, ir.Method)
         if method is not None:
             if method.inferred:

@@ -1,3 +1,5 @@
+"""Kirin statements that label measurement parities as QEC metadata."""
+
 from . import stmts as stmts, types as types
 from ._dialect import dialect as dialect
 from ._interface import (

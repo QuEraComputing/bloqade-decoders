@@ -54,8 +54,5 @@ class SinterTableDecoder(_SinterDecoder):
         *,
         dem: stim.DetectorErrorModel,
     ) -> _SinterCompiledDecoder:
-        sampler = dem.compile_sampler()
-        det_data, obs_data, _ = sampler.sample(self.num_shots)
-        det_obs_shots = np.concatenate([det_data, obs_data], axis=1)
-        decoder = TableDecoder.from_det_obs_shots(dem, det_obs_shots)
+        decoder = TableDecoder(dem, num_shots=self.num_shots)
         return _CompiledTableDecoder(decoder)
