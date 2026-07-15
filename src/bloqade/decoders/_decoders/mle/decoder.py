@@ -142,7 +142,9 @@ class GurobiDecoder(BaseDecoder):
     def weight_from_error(self, error: np.ndarray) -> np.ndarray:
         return np.sum(error * self._weights, axis=1)
 
-    def _decode_error(self, det_shots: np.ndarray) -> np.ndarray:
+    def _decode_error(
+        self, det_shots: np.ndarray, confidence: np.ndarray | None = None
+    ) -> np.ndarray:
         import gurobipy as gp
         from gurobipy import GRB
 
@@ -192,9 +194,9 @@ class GurobiDecoder(BaseDecoder):
                 if self._verbose:
                     print("Did not find optimal solution", m.status)
                 m.close()
-                raise RuntimeError(
-                    f"Gurobi did not find an optimal solution. Status: {m.status}"
-                )
+                if confidence is not None:
+                    confidence[d] = 0.0
+                continue
             error = np.round(
                 np.array([e.X for e in error_variables]), decimals=0
             ).astype(bool)
@@ -215,25 +217,35 @@ class GurobiDecoder(BaseDecoder):
                     ) % 2
         return logicals.astype(bool)
 
+    def _decode_batch(
+        self, detector_bits: npt.NDArray[np.bool_]
+    ) -> tuple[npt.NDArray[np.bool_], npt.NDArray[np.float64]]:
+        confidence = np.ones(len(detector_bits), dtype=np.float64)
+        errors = self._decode_error(detector_bits, confidence)
+        result = self.logical_from_error(errors)
+        result[confidence == 0.0] = False
+        return result, confidence
+
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a single shot of detector bits."""
-        det_2d = detector_bits.reshape(1, -1)
-        errors = self._decode_error(det_2d)
-        obs = self.logical_from_error(errors)
-        return obs[0].astype(np.bool_)
+        result, _ = self._decode_batch(detector_bits.reshape(1, -1))
+        return result[0]
 
     def decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a batch or single shot of detector bits."""
         if detector_bits.ndim == 1:
             return self._decode(detector_bits)
-        errors = self._decode_error(detector_bits)
-        return self.logical_from_error(errors)
+        result, _ = self._decode_batch(detector_bits)
+        return result
 
     def decode_confidence(
         self, detector_bits: npt.NDArray[np.bool_]
     ) -> tuple[npt.NDArray[np.bool_], float | npt.NDArray[np.float64]]:
         """Decode detector bits with the default confidence score."""
-        result = self.decode(detector_bits)
-        if detector_bits.ndim == 1:
-            return result, 1.0
-        return result, np.ones(len(detector_bits), dtype=np.float64)
+        is_single_shot = detector_bits.ndim == 1
+        result, confidence = self._decode_batch(
+            detector_bits.reshape(1, -1) if is_single_shot else detector_bits
+        )
+        if is_single_shot:
+            return result[0], float(confidence[0])
+        return result, confidence

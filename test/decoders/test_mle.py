@@ -1,4 +1,5 @@
 import math
+from unittest.mock import Mock
 
 import stim
 import numpy as np
@@ -135,6 +136,30 @@ def test_single_shot_decode_confidence():
 
     assert confidence == 1.0
     np.testing.assert_array_equal(result, np.array([True]))
+
+
+def test_nonoptimal_status_has_zero_confidence(monkeypatch):
+    import gurobipy as gp
+    from gurobipy import GRB
+
+    decoder = GurobiDecoder(stim.DetectorErrorModel("error(0) L0"))
+    models = [Mock(status=GRB.INFEASIBLE), Mock(status=GRB.OPTIMAL)]
+    monkeypatch.setattr(gp, "Model", Mock(side_effect=models))
+    monkeypatch.setattr(gp, "Env", Mock(return_value=Mock()))
+    monkeypatch.setattr(GurobiDecoder, "_env", None)
+
+    result, confidence = decoder.decode_confidence(np.empty((2, 0), dtype=bool))
+
+    np.testing.assert_array_equal(result, np.array([[False], [False]]))
+    np.testing.assert_array_equal(confidence, np.array([0.0, 1.0]))
+
+    monkeypatch.setattr(gp, "Model", Mock(return_value=Mock(status=GRB.INFEASIBLE)))
+    np.testing.assert_array_equal(decoder.decode(np.empty(0, dtype=bool)), [False])
+
+    result, confidence = decoder.decode_confidence(np.empty(0, dtype=bool))
+
+    np.testing.assert_array_equal(result, np.array([False]))
+    assert confidence == 0.0
 
 
 # --- SinterGurobiDecoder tests ---
