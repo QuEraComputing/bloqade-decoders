@@ -5,7 +5,7 @@ from kirin import types
 
 
 class MeasurementResultValue(IntEnum):
-    """Possible measurement outcomes represented in decoder annotations."""
+    """Classify a physical measurement as zero, one, or atom loss."""
 
     Zero = 0
     One = 1
@@ -14,19 +14,19 @@ class MeasurementResultValue(IntEnum):
 
 @dataclass
 class MeasurementResult:
-    """A typed measurement result value for annotation statements."""
+    """Represent a measurement outcome consumed by parity annotations."""
 
     value: MeasurementResultValue
 
 
 class Detector:
-    """Marker type for detector annotations."""
+    """Type marker returned when a detector parity is declared."""
 
     pass
 
 
 class Observable:
-    """Marker type for observable annotations."""
+    """Type marker returned when an observable parity is declared."""
 
     pass
 

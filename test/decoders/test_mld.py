@@ -1,4 +1,5 @@
 import math
+from unittest.mock import Mock
 
 import stim
 import numpy as np
@@ -166,6 +167,25 @@ def test_table_decoder_trains_with_default_num_shots():
     result = decoder.decode(np.array([[0, 0]], dtype=bool))
 
     assert result.shape == (1, 1)
+
+
+def test_train_replaces_existing_counts():
+    sampler = Mock()
+    sampler.sample.return_value = (
+        np.zeros((3, 2), dtype=bool),
+        np.zeros((3, 1), dtype=bool),
+        None,
+    )
+    dem = Mock(num_detectors=2, num_observables=1)
+    dem.compile_sampler.return_value = sampler
+    decoder = TableDecoder.instantiate(dem)
+    decoder.update_det_obs_counts(np.array([[0, 0, 1]], dtype=bool))
+    np.testing.assert_array_equal(decoder.decode(np.array([0, 0])), np.array([True]))
+
+    decoder.train(num_shots=3)
+
+    sampler.sample.assert_called_once_with(3)
+    np.testing.assert_array_equal(decoder.decode(np.array([0, 0])), np.array([False]))
 
 
 def test_alternate_constructors_are_removed():

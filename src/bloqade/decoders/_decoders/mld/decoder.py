@@ -54,7 +54,14 @@ class TableDecoder(BaseDecoder):
         num_shots: int = 10_000,
         **_kwargs: Any,
     ) -> None:
-        """Train the lookup table by sampling from the detector error model."""
+        """Replace the lookup table with counts sampled from the error model.
+
+        Any detector-observable counts previously collected with
+        :meth:`update_det_obs_counts` are discarded.
+
+        Args:
+            num_shots: Number of detector-observable samples to collect.
+        """
         data_len = self.num_detectors + self.num_observables
         if data_len > 64:
             raise ValueError(

@@ -1,4 +1,4 @@
-"""Immediate-loop dialect for repeated decoder operations."""
+"""Kirin dialect mapping fixed-count method repetition to Stim REPEAT blocks."""
 
 from . import stmts as stmts, typeinfer as typeinfer
 from ._dialect import dialect as dialect

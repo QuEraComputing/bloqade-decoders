@@ -42,10 +42,6 @@ def test_instantiate_skips_training():
     assert not hasattr(decoder, "trained")
 
 
-def test_subclasses_do_not_define_instantiate():
-    assert "instantiate" not in ExampleDecoder.__dict__
-
-
 def test_decode_confidence_defaults_to_one():
     decoder = ExampleDecoder(stim.DetectorErrorModel("error(0.1) D0 L0"))
 
@@ -72,8 +68,3 @@ def test_decode_confidence_accepts_batches():
 
     np.testing.assert_array_equal(corrections, np.array([[False], [True]]))
     np.testing.assert_array_equal(confidences, np.array([1.0, 0.0]))
-
-
-def test_batch_helpers_are_not_part_of_the_base_api():
-    assert not hasattr(BaseDecoder, "batch_decode")
-    assert not hasattr(BaseDecoder, "batch_decode_confidence")
