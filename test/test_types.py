@@ -1,6 +1,5 @@
 import pytest
 
-from bloqade.decoders.dialects.annotate import types as annotate_types
 from bloqade.decoders.dialects.annotate.types import (
     MeasurementResult,
     MeasurementResultValue,
@@ -91,7 +90,5 @@ def test_measurement_result_rxor_happy_path():
     assert result == MeasurementResult(One)
 
 
-def test_measurement_value_rxor_happy_path_direct_call():
-    assert (
-        annotate_types._measurement_value_rxor(One, Zero) is One
-    )
+def test_measurement_value_rxor_happy_path():
+    assert Zero.__rxor__(One) is One

@@ -39,6 +39,27 @@ class MeasurementResultValue(IntEnum):
     One = 1
     Lost = 2
 
+    def __xor__(self, other: Any) -> "MeasurementResultValue":
+        """Return Lost-aware XOR of this value with ``other``."""
+        rhs = _as_measurement_value(other)
+        if rhs is None:
+            # Do not return NotImplemented: IntEnum would fall back to int XOR.
+            raise TypeError(
+                f"unsupported operand type(s) for ^: "
+                f"'MeasurementResultValue' and '{type(other).__name__}'"
+            )
+        return _xor_measurement_values(self, rhs)
+
+    def __rxor__(self, other: Any) -> "MeasurementResultValue":
+        """Return Lost-aware XOR with this value on the right-hand side."""
+        lhs = _as_measurement_value(other)
+        if lhs is None:
+            raise TypeError(
+                f"unsupported operand type(s) for ^: "
+                f"'{type(other).__name__}' and 'MeasurementResultValue'"
+            )
+        return _xor_measurement_values(lhs, self)
+
 
 @dataclass
 class MeasurementResult:
@@ -67,37 +88,6 @@ class MeasurementResult:
         return MeasurementResult(_xor_measurement_values(lhs, self.value))
 
 
-def _measurement_value_xor(
-    self: MeasurementResultValue, other: Any
-) -> MeasurementResultValue:
-    """Return Lost-aware XOR of this value with ``other``."""
-    rhs = _as_measurement_value(other)
-    if rhs is None:
-        # Do not return NotImplemented: IntEnum would fall back to int XOR.
-        raise TypeError(
-            f"unsupported operand type(s) for ^: "
-            f"'MeasurementResultValue' and '{type(other).__name__}'"
-        )
-    return _xor_measurement_values(self, rhs)
-
-
-def _measurement_value_rxor(
-    self: MeasurementResultValue, other: Any
-) -> MeasurementResultValue:
-    """Return Lost-aware XOR with this value on the right-hand side."""
-    lhs = _as_measurement_value(other)
-    if lhs is None:
-        raise TypeError(
-            f"unsupported operand type(s) for ^: "
-            f"'{type(other).__name__}' and 'MeasurementResultValue'"
-        )
-    return _xor_measurement_values(lhs, self)
-
-
-MeasurementResultValue.__xor__ = _measurement_value_xor  # type: ignore[method-assign]
-MeasurementResultValue.__rxor__ = _measurement_value_rxor  # type: ignore[method-assign]
-
-
 class Detector:
     """Type marker returned when a detector parity is declared."""
 
@@ -114,3 +104,5 @@ class Observable:
 MeasurementResultType = types.PyClass(MeasurementResult)
 DetectorType = types.PyClass(Detector)
 ObservableType = types.PyClass(Observable)
+
+from . import _typeinfer_binop as _typeinfer_binop  # noqa: E402, F401
