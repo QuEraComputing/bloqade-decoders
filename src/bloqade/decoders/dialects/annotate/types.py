@@ -104,5 +104,3 @@ class Observable:
 MeasurementResultType = types.PyClass(MeasurementResult)
 DetectorType = types.PyClass(Detector)
 ObservableType = types.PyClass(Observable)
-
-from . import _typeinfer_binop as _typeinfer_binop  # noqa: E402, F401

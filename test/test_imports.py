@@ -92,13 +92,3 @@ def test_measurement_result_value_enum():
     assert MeasurementResultValue.Zero == 0
     assert MeasurementResultValue.One == 1
     assert MeasurementResultValue.Lost == 2
-
-
-def test_measurement_xor_typeinfer_registered_on_import():
-    from kirin.dialects.py.binop import dialect as binop_dialect
-
-    from bloqade.decoders import MeasurementResult
-
-    assert MeasurementResult is not None
-    typeinfer = binop_dialect.interps["typeinfer"]
-    assert hasattr(typeinfer, "bitxor_measurement")

@@ -1,21 +1,10 @@
-from kirin import types, passes
+from kirin import passes, types
 from kirin.prelude import structural_no_opt
-from kirin.registry import Registry
-from kirin.interp.table import Signature
-from kirin.dialects.py.binop import stmts as binop_stmts
 
 from bloqade.decoders.dialects.annotate.types import (
     MeasurementResult,
     MeasurementResultType,
 )
-
-
-def test_measurement_xor_typeinfer_registry():
-    registry = Registry(structural_no_opt).interpreter(["typeinfer"])
-    signature = Signature(
-        binop_stmts.BitXor, (MeasurementResultType, MeasurementResultType)
-    )
-    assert signature in registry
 
 
 def test_measurement_xor_typeinfer():
