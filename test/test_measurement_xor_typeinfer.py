@@ -1,7 +1,7 @@
-from kirin import passes, types
-from kirin.interp.table import Signature
+from kirin import types, passes
 from kirin.prelude import structural_no_opt
 from kirin.registry import Registry
+from kirin.interp.table import Signature
 from kirin.dialects.py.binop import stmts as binop_stmts
 
 from bloqade.decoders.dialects.annotate.types import (
