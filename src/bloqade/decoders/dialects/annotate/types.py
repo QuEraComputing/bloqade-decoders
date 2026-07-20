@@ -11,12 +11,29 @@ class MeasurementResultValue(IntEnum):
     One = 1
     Lost = 2
 
+    @property
+    def symbol(self) -> str:
+        """Single-character symbol: '0', '1', or 'L'(Lost)"""
+
+        return {
+            MeasurementResultValue.Zero: "0",
+            MeasurementResultValue.One:  "1",
+            MeasurementResultValue.Lost: "L",
+        }[self]
+    
+    def __repr__(self) -> str:
+        return self.symbol
+    
+    __str__ = __repr__
 
 @dataclass
 class MeasurementResult:
     """Represent a measurement outcome consumed by parity annotations."""
 
     value: MeasurementResultValue
+
+    def __repr__(self) -> str:
+        return self.value.symbol
 
 
 class Detector:
