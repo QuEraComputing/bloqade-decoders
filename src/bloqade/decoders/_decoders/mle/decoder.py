@@ -44,7 +44,7 @@ class GurobiDecoder(BaseDecoder):
             ) from e
 
         try:
-            import scipy.sparse  # noqa: F401
+            import scipy.sparse
         except ImportError as e:
             raise ImportError(
                 "The scipy package is required for GurobiDecoder. "
@@ -69,7 +69,7 @@ class GurobiDecoder(BaseDecoder):
 
         for instruction in self._flat_dem:  # type: ignore[union-attr]
             if not isinstance(instruction, DemInstruction):
-                raise Exception(
+                raise TypeError(
                     "The detector-error model should be already flattened. But still got DemRepeatBlock."
                 )
             if instruction.type != "error":
@@ -86,8 +86,7 @@ class GurobiDecoder(BaseDecoder):
                     det_targets.append(target.val)
                 else:
                     obs_targets.append(target.val)
-                    if target.val > max_observable_index:
-                        max_observable_index = target.val
+                    max_observable_index = max(max_observable_index, target.val)
 
             if probability == 1:
                 # Certain errors always fire: pre-apply their contributions
