@@ -143,6 +143,16 @@ def test_decode_confidence():
     np.testing.assert_array_equal(confidence, np.array([1.0, 1.0]))
 
 
+def test_decode_confidence_is_empirical_fraction():
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
+    decoder = _trained_decoder_from_counts(dem, np.array([0, 0, 1, 0, 0, 0, 9, 0]))
+
+    result, confidence = decoder.decode_confidence(np.array([0, 1], dtype=bool))
+
+    np.testing.assert_array_equal(result, np.array([True]))
+    assert confidence == pytest.approx(0.9)
+
+
 def test_single_shot_decode_confidence():
     dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
     decoder = _trained_decoder_from_counts(dem, np.array([81, 0, 0, 1, 0, 9, 9, 0]))

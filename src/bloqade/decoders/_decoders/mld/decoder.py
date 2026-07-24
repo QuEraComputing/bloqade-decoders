@@ -127,6 +127,16 @@ class TableDecoder(BaseDecoder):
             self._maximum_likelihood_correction = np.argmax(obs_counts, axis=0).reshape(
                 -1
             )
+            max_counts = np.max(obs_counts, axis=0).astype(np.float64, copy=False)
+            total_counts = np.sum(obs_counts, axis=0, dtype=np.uint64)
+            confidence = np.zeros(total_counts.shape, dtype=np.float64)
+            np.divide(
+                max_counts,
+                total_counts.astype(np.float64, copy=False),
+                out=confidence,
+                where=total_counts > 0,
+            )
+            self._correction_confidence = confidence
             self._is_cached_correction = True
 
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
@@ -157,15 +167,21 @@ class TableDecoder(BaseDecoder):
     def decode_confidence(
         self, detector_bits: npt.NDArray[np.bool_]
     ) -> tuple[npt.NDArray[np.bool_], float | npt.NDArray[np.float64]]:
-        """Decode detector bits with the default confidence score."""
+        """Decode detector bits with empirical correction confidence.
+
+        For each detector syndrome, the confidence is the sampled count of its
+        most likely observable correction divided by the total sampled count
+        for that syndrome. It is in ``[0.0, 1.0]`` and is ``0.0`` for an unseen
+        syndrome.
+
+        This empirical fraction is not on the same scale as
+        :class:`GurobiDecoder`'s normalized logical-gap confidence, even though
+        both are in ``[0.0, 1.0]``. Confidence thresholds are therefore not
+        interchangeable between the MLD and MLE decoders without calibration.
+        """
         result = self.decode(detector_bits)
-        counts_by_observable_and_syndrome = self._det_obs_counts.reshape(
-            2**self.num_observables, 2**self.num_detectors
-        )
         packed = pack_boolean_array(detector_bits.reshape(-1, self.num_detectors))
-        confidence = (
-            counts_by_observable_and_syndrome[:, packed].sum(axis=0) > 0
-        ).astype(np.float64)
+        confidence = self._correction_confidence[packed]
         if detector_bits.ndim == 1:
             return result, float(confidence[0])
         return result, confidence

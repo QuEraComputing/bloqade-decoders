@@ -1,5 +1,4 @@
 import math
-from unittest.mock import Mock
 
 import stim
 import numpy as np
@@ -124,7 +123,8 @@ def test_decode_confidence():
     result, confidence = decoder.decode_confidence(det_shots)
 
     np.testing.assert_array_equal(result, obs_shots)
-    np.testing.assert_array_equal(confidence, np.array([1.0, 1.0]))
+    expected = np.tanh(4 * np.log(9))
+    np.testing.assert_allclose(confidence, np.full(2, expected))
 
 
 def test_single_shot_decode_confidence():
@@ -134,32 +134,77 @@ def test_single_shot_decode_confidence():
 
     result, confidence = decoder.decode_confidence(det_shots)
 
-    assert confidence == 1.0
+    assert np.isclose(confidence, np.tanh(4 * np.log(9)))
     np.testing.assert_array_equal(result, np.array([True]))
 
 
-def test_nonoptimal_status_has_zero_confidence(monkeypatch):
-    import gurobipy as gp
-    from gurobipy import GRB
+def test_equal_likelihood_alternatives_have_zero_confidence():
+    dem = stim.DetectorErrorModel("""
+        error(0.1) D0 L0
+        error(0.1) D0
+        """)
+    decoder = GurobiDecoder(dem)
 
-    decoder = GurobiDecoder(stim.DetectorErrorModel("error(0) L0"))
-    models = [Mock(status=GRB.INFEASIBLE), Mock(status=GRB.OPTIMAL)]
-    monkeypatch.setattr(gp, "Model", Mock(side_effect=models))
-    monkeypatch.setattr(gp, "Env", Mock(return_value=Mock()))
-    monkeypatch.setattr(GurobiDecoder, "_env", None)
+    result, confidence = decoder.decode_confidence(np.array([True], dtype=bool))
 
-    result, confidence = decoder.decode_confidence(np.empty((2, 0), dtype=bool))
+    assert result.shape == (1,)
+    assert confidence == pytest.approx(0.0)
+
+
+def test_finite_logical_gap_has_normalized_confidence():
+    dem = stim.DetectorErrorModel("""
+        error(0.75) D0 L0
+        error(0.25) D0
+        """)
+    decoder = GurobiDecoder(dem)
+
+    result, confidence = decoder.decode_confidence(np.array([True], dtype=bool))
+
+    np.testing.assert_array_equal(result, np.array([True]))
+    assert confidence == pytest.approx(0.8)
+
+
+def test_nonoptimal_status_has_zero_confidence():
+    dem = stim.DetectorErrorModel("""
+        detector D0
+        error(0) L0
+        """)
+    decoder = GurobiDecoder(dem)
+
+    result, confidence = decoder.decode_confidence(
+        np.array([[True], [False]], dtype=bool)
+    )
 
     np.testing.assert_array_equal(result, np.array([[False], [False]]))
-    np.testing.assert_array_equal(confidence, np.array([0.0, 1.0]))
+    assert isinstance(confidence, np.ndarray)
+    assert confidence[0] == 0.0
+    assert confidence[1] == 1.0
 
-    monkeypatch.setattr(gp, "Model", Mock(return_value=Mock(status=GRB.INFEASIBLE)))
-    np.testing.assert_array_equal(decoder.decode(np.empty(0, dtype=bool)), [False])
-
-    result, confidence = decoder.decode_confidence(np.empty(0, dtype=bool))
+    result, confidence = decoder.decode_confidence(np.array([True], dtype=bool))
 
     np.testing.assert_array_equal(result, np.array([False]))
     assert confidence == 0.0
+
+
+def test_nonoptimal_alternative_solve_has_zero_confidence(monkeypatch):
+    decoder = GurobiDecoder(stim.DetectorErrorModel("error(0.1) D0 L0"))
+    best = decoder._ConfidenceSolveResult(
+        error=np.array([True]),
+        logical=np.array([True]),
+        objective=1.0,
+    )
+
+    def solve(detector_shot, *, verbose=False, forbidden_logical=None):
+        if forbidden_logical is None:
+            return best, True
+        return None, False
+
+    monkeypatch.setattr(decoder, "_solve_single_shot_for_confidence", solve)
+
+    result, confidence = decoder.decode_confidence(np.array([[True]], dtype=bool))
+
+    np.testing.assert_array_equal(result, np.array([[False]]))
+    np.testing.assert_array_equal(confidence, np.array([0.0]))
 
 
 # --- SinterGurobiDecoder tests ---
@@ -359,3 +404,19 @@ def test_prob_one_error_pre_applied():
     assert result.shape == (1, 1)
     # The certain error flips L0, so the observable should be True
     assert result[0, 0]
+
+
+def test_decode_confidence_includes_prob_one_error_contributions():
+    dem = stim.DetectorErrorModel("""
+        error(1.0) D0 L0
+        error(0.1) D1 L0
+        """)
+    decoder = GurobiDecoder(dem)
+
+    result, confidence = decoder.decode_confidence(
+        np.array([[1, 0], [1, 1]], dtype=bool)
+    )
+
+    np.testing.assert_array_equal(result, np.array([[True], [False]]))
+    assert isinstance(confidence, np.ndarray)
+    np.testing.assert_array_equal(confidence, np.ones(2))

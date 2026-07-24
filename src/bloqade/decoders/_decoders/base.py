@@ -77,6 +77,10 @@ class BaseDecoder(ABC):
     ) -> tuple[npt.NDArray[np.bool_], float | npt.NDArray[np.float64]]:
         """Decode a batch or single shot of detector bits with confidence scores.
 
+        Confidence scores are decoder-specific. They are not necessarily
+        probabilities or bounded to a common range, so confidence thresholds
+        should not be shared across decoder types without calibration.
+
         Confidence is ``0.0`` when a decoder did not converge. This default
         implementation always reports ``1.0`` because it has no convergence
         signal.

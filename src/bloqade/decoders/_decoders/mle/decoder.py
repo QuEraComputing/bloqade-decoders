@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, cast
 
 import stim
 import numpy as np
@@ -28,6 +28,11 @@ class GurobiDecoder(BaseDecoder):
     """
 
     _env: ClassVar[GurobiEnv | None] = None
+
+    class _ConfidenceSolveResult(NamedTuple):
+        error: np.ndarray
+        logical: np.ndarray
+        objective: float
 
     def _instantiate(self, verbose: bool = False, **_kwargs: Any) -> None:
         try:
@@ -121,6 +126,14 @@ class GurobiDecoder(BaseDecoder):
         self._observable_indices = observable_indices
         self._certain_det_flip = certain_det_flip
         self._certain_obs_flip = certain_obs_flip
+
+    @classmethod
+    def _get_env(cls) -> object:
+        import gurobipy as gp
+
+        if cls._env is None:
+            cls._env = gp.Env()
+        return cls._env
 
     @staticmethod
     def _check_no_separators(dem: stim.DetectorErrorModel) -> None:
@@ -238,14 +251,195 @@ class GurobiDecoder(BaseDecoder):
         result, _ = self._decode_batch(detector_bits)
         return result
 
+    def _solve_single_shot_for_confidence(
+        self,
+        detector_shot: np.ndarray,
+        *,
+        verbose: bool = False,
+        forbidden_logical: np.ndarray | None = None,
+    ) -> tuple[_ConfidenceSolveResult | None, bool]:
+        import gurobipy as gp
+
+        GRB = gp.GRB
+
+        env = cast(Any, self._get_env())
+        env.setParam("OutputFlag", 1 if verbose else 0)  # type: ignore[union-attr]
+
+        m = gp.Model("mip1", env=env)
+        weights = self._weights
+        detector_vertices = self._detector_vertices
+        observable_indices = self._observable_indices
+
+        error_variables: list["gp.Var"] = []
+        detector_variables: list["gp.Var"] = []
+        logical_variables: list["gp.Var"] = []
+        objective: gp.LinExpr = gp.LinExpr(0)
+
+        for i, weight in enumerate(weights):
+            error_variables.append(m.addVar(vtype=GRB.BINARY, name="e" + str(i)))
+            objective += weight * error_variables[i]
+        m.setObjective(objective, GRB.MAXIMIZE)
+
+        detector_shot = np.asarray(detector_shot, dtype=int) ^ self._certain_det_flip
+        for i, detector_vertex in enumerate(detector_vertices):
+            detector_variables.append(
+                m.addVar(
+                    vtype=GRB.INTEGER,
+                    name="h" + str(i),
+                    ub=len(detector_vertex),
+                    lb=0,
+                )
+            )
+            constraint: gp.LinExpr = gp.LinExpr(0)
+            for j in detector_vertex:
+                constraint += error_variables[j]
+            constraint -= 2 * detector_variables[i]
+            m.addConstr(constraint == int(detector_shot[i]), name="c" + str(i))
+
+        for obs_idx, observable_index in enumerate(observable_indices):
+            logical_var = m.addVar(vtype=GRB.BINARY, name="l" + str(obs_idx))
+            logical_variables.append(logical_var)
+            certain_flip = int(self._certain_obs_flip[obs_idx])
+            if len(observable_index) == 0:
+                m.addConstr(
+                    logical_var == certain_flip,
+                    name="lfix" + str(obs_idx),
+                )
+                continue
+            slack_var = m.addVar(
+                vtype=GRB.INTEGER,
+                lb=0,
+                ub=len(observable_index),
+                name="u" + str(obs_idx),
+            )
+            constraint = gp.LinExpr(certain_flip)
+            for j in observable_index:
+                constraint += error_variables[j]
+            constraint -= 2 * slack_var
+            m.addConstr(constraint == logical_var, name="lpar" + str(obs_idx))
+
+        if forbidden_logical is not None:
+            diff_variables: list["gp.Var"] = []
+            for obs_idx, forbidden_bit in enumerate(forbidden_logical.astype(int)):
+                diff_var = m.addVar(vtype=GRB.BINARY, name="d" + str(obs_idx))
+                diff_variables.append(diff_var)
+                if forbidden_bit:
+                    m.addConstr(
+                        diff_var + logical_variables[obs_idx] == 1,
+                        name="ddiff" + str(obs_idx),
+                    )
+                else:
+                    m.addConstr(
+                        diff_var == logical_variables[obs_idx],
+                        name="ddiff" + str(obs_idx),
+                    )
+            m.addConstr(gp.quicksum(diff_variables) >= 1, name="logical_difference")
+
+        m.optimize()
+        status = m.status
+        if status == GRB.INFEASIBLE and forbidden_logical is not None:
+            m.close()
+            return None, True
+        if status != GRB.OPTIMAL:
+            if verbose:
+                print("Did not find optimal solution", status)
+            m.close()
+            return None, False
+
+        error = np.round(
+            np.array([var.X for var in error_variables]), decimals=0
+        ).astype(bool)
+        logical = np.round(
+            np.array([var.X for var in logical_variables]), decimals=0
+        ).astype(bool)
+        objective_value = float(m.ObjVal)
+        m.close()
+        return (
+            self._ConfidenceSolveResult(
+                error=error,
+                logical=logical,
+                objective=objective_value,
+            ),
+            True,
+        )
+
+    def _decode_with_logical_gap(
+        self,
+        detector_bits: npt.NDArray[np.bool_],
+        verbose: bool = False,
+    ) -> tuple[npt.NDArray[np.bool_], np.ndarray]:
+        """Decode detector bits and return the logical-gap confidence score."""
+
+        single_shot = detector_bits.ndim == 1
+        det_shots = detector_bits.reshape(1, -1) if single_shot else detector_bits
+
+        decoded_obs = np.zeros(
+            (det_shots.shape[0], self.num_observables),
+            dtype=np.bool_,
+        )
+        logical_gaps = np.zeros(det_shots.shape[0], dtype=float)
+
+        for shot_idx, detector_shot in enumerate(det_shots.astype(int)):
+            best, best_converged = self._solve_single_shot_for_confidence(
+                detector_shot,
+                verbose=verbose,
+            )
+            if not best_converged:
+                continue
+            assert best is not None
+            second, second_converged = self._solve_single_shot_for_confidence(
+                detector_shot,
+                verbose=verbose,
+                forbidden_logical=best.logical,
+            )
+            if not second_converged:
+                continue
+            decoded_obs[shot_idx] = best.logical
+            logical_gaps[shot_idx] = (
+                np.inf if second is None else best.objective - second.objective
+            )
+
+        if single_shot:
+            return decoded_obs[0], logical_gaps
+        return decoded_obs, logical_gaps
+
     def decode_confidence(
         self, detector_bits: npt.NDArray[np.bool_]
     ) -> tuple[npt.NDArray[np.bool_], float | npt.NDArray[np.float64]]:
-        """Decode detector bits with the default confidence score."""
-        is_single_shot = detector_bits.ndim == 1
-        result, confidence = self._decode_batch(
-            detector_bits.reshape(1, -1) if is_single_shot else detector_bits
+        """Decode detector bits and return normalized logical-gap confidence.
+
+        For a detector syndrome, let ``best`` be the most likely error
+        configuration and ``alternative`` be the most likely configuration
+        with a different logical correction. First compute the logical gap
+
+        ``log(P(best) / P(alternative))``,
+
+        as the difference between their Gurobi objective values. The returned
+        confidence is ``tanh(logical_gap / 2)``, a normalized likelihood margin
+        in ``[0.0, 1.0]``. It is ``1.0`` when no alternative logical correction
+        is feasible and ``0.0`` when the alternatives are equally likely or
+        either optimization does not find an optimal solution.
+
+        This normalized margin is not a calibrated probability and is not on
+        the same scale as :class:`TableDecoder`'s empirical confidence.
+        Confidence thresholds are therefore not interchangeable between the
+        MLE and MLD decoders without calibration.
+
+        A single detector shot returns one correction and a scalar confidence.
+        A batch returns corrections with shape ``(shots, num_observables)``
+        and confidence scores with shape ``(shots,)``.
+        """
+
+        single_shot = detector_bits.ndim == 1
+        decoded_obs, logical_gaps = self._decode_with_logical_gap(
+            detector_bits, verbose=self._verbose
         )
-        if is_single_shot:
-            return result[0], float(confidence[0])
-        return result, confidence
+
+        decoded_obs = decoded_obs.astype(np.bool_)
+        logical_gaps = np.asarray(logical_gaps, dtype=np.float64).reshape(-1)
+        confidence = np.tanh(np.maximum(logical_gaps, 0.0) / 2.0)
+
+        if single_shot:
+            return decoded_obs, float(confidence[0])
+
+        return decoded_obs, confidence
