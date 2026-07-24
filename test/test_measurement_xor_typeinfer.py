@@ -1,4 +1,4 @@
-from kirin import passes, types
+from kirin import types, passes
 from kirin.prelude import structural_no_opt
 
 from bloqade.decoders.dialects.annotate.types import (

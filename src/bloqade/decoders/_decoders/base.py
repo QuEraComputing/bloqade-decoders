@@ -4,6 +4,7 @@ from typing import Any, TypeVar
 import stim
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import Self
 
 DecoderT = TypeVar("DecoderT", bound="BaseDecoder")
 
@@ -15,9 +16,7 @@ class BaseDecoder(ABC):
         self.train(**kwargs)
 
     @classmethod
-    def instantiate(
-        cls: type[DecoderT], dem: stim.DetectorErrorModel, **kwargs: Any
-    ) -> DecoderT:
+    def instantiate(cls, dem: stim.DetectorErrorModel, **kwargs: Any) -> Self:
         """Configure an untrained decoder from constructor keyword arguments."""
         decoder = cls.__new__(cls)
         decoder.dem = dem
@@ -26,7 +25,6 @@ class BaseDecoder(ABC):
 
     def _instantiate(self, **kwargs: Any) -> None:
         """Configure the decoder from constructor keyword arguments."""
-        pass
 
     @property
     def num_detectors(self) -> int:
@@ -41,12 +39,10 @@ class BaseDecoder(ABC):
 
         The default is a no-op for decoders that do not need training.
         """
-        pass
 
     @abstractmethod
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a single shot of detector bits."""
-        pass
 
     def decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a batch or single shot of detector bits.
