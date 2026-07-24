@@ -153,6 +153,23 @@ def test_single_shot_decode_confidence():
     np.testing.assert_array_equal(result, np.array([True]))
 
 
+def test_unseen_syndrome_has_zero_confidence():
+    dem = stim.DetectorErrorModel("error(0.1) D0 L0\nerror(0.1) D1 L0\n")
+    decoder = _trained_decoder_from_counts(dem, np.array([1, 0, 0, 0, 0, 1, 0, 0]))
+
+    result, confidence = decoder.decode_confidence(
+        np.array([[0, 0], [1, 0], [0, 1]], dtype=bool)
+    )
+
+    np.testing.assert_array_equal(result, np.array([[False], [True], [False]]))
+    np.testing.assert_array_equal(confidence, np.array([1.0, 1.0, 0.0]))
+
+    result, confidence = decoder.decode_confidence(np.array([0, 1], dtype=bool))
+
+    np.testing.assert_array_equal(result, np.array([False]))
+    assert confidence == 0.0
+
+
 def test_table_decoder_can_instantiate_without_training():
     decoder = TableDecoder.instantiate(simple_dem())
 
