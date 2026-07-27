@@ -1,4 +1,5 @@
-from typing import Any, TypeVar, Callable
+from typing import Any, TypeVar
+from collections.abc import Callable
 
 from kirin.dialects import ilist
 from kirin.lowering import wraps
