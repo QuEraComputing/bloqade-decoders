@@ -11,6 +11,7 @@ DecoderT = TypeVar("DecoderT", bound="BaseDecoder")
 
 class BaseDecoder(ABC):
     def __init__(self, dem: stim.DetectorErrorModel, **kwargs: Any) -> None:
+        """Every base decoder takes in a detector error model and optional keyword arguments at construction."""
         self.dem = dem
         self._instantiate(**kwargs)
         self.train(**kwargs)

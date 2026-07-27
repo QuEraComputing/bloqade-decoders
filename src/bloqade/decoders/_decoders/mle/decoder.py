@@ -25,6 +25,18 @@ class GurobiDecoder(BaseDecoder):
     Args:
         dem: The detector error model describing the error structure.
         verbose: If True, print Gurobi solver output.
+
+    Examples:
+        >>> from bloqade.decoders import GurobiDecoder
+        >>> import stim
+        >>> dem = stim.DetectorErrorModel(
+        ...     '''
+        ...     error(0.02) D0 L0
+        ...     error(0.1) D1 L0
+        ...     '''
+        ... )
+        >>> mle_decoder = GurobiDecoder(dem)
+        >>> mle_decoder_verbose = GurobiDecoder(dem, verbose=True)
     """
 
     _env: ClassVar[GurobiEnv | None] = None
@@ -152,6 +164,7 @@ class GurobiDecoder(BaseDecoder):
                         )
 
     def weight_from_error(self, error: np.ndarray) -> np.ndarray:
+        """Return the log-odds objective value for each error configuration."""
         return np.sum(error * self._weights, axis=1)
 
     def _decode_error(
@@ -217,6 +230,47 @@ class GurobiDecoder(BaseDecoder):
         return errors
 
     def logical_from_error(self, errors: np.ndarray) -> np.ndarray:
+        """Convert batched error configurations into logical-observable flips.
+
+        Each row of ``errors`` selects the variable error mechanisms in the
+        flattened detector error model. Columns follow the order of error
+        instructions with probabilities strictly between zero and one; errors
+        with probability one are applied automatically. The logical targets of
+        the selected mechanisms are combined modulo two.
+
+        Args:
+            errors: Boolean array with shape
+                ``(num_shots, num_error_variables)``.
+
+        Returns:
+            Boolean array with shape ``(num_shots, num_observables)``.
+
+        Examples:
+            >>> import stim
+            >>> import numpy as np
+            >>> from bloqade.decoders import GurobiDecoder
+            >>> dem = stim.DetectorErrorModel(
+            ...     '''
+            ...     error(0.02) D0 L0
+            ...     error(0.1) D1 L0
+            ...     '''
+            ... )
+            >>> decoder = GurobiDecoder(dem)
+            >>> errors = np.array(
+            ...     [
+            ...         [False, False],
+            ...         [True, False],
+            ...         [False, True],
+            ...         [True, True],
+            ...     ],
+            ...     dtype=bool,
+            ... )
+            >>> decoder.logical_from_error(errors)
+            array([[False],
+                   [ True],
+                   [ True],
+                   [False]])
+        """
         num_shots = errors.shape[0]
         observable_indices = self._observable_indices
         # Start from certain error contributions (prob=1.0 errors always fire)
@@ -244,7 +298,36 @@ class GurobiDecoder(BaseDecoder):
         return result[0]
 
     def decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
-        """Decode a batch or single shot of detector bits."""
+        """
+        Decode a batch or single shot of detector bits.
+
+        Args:
+            detector_bits: 1D (single shot) or 2D (batch) boolean array.
+
+        Returns:
+            Observable corrections as boolean array.
+
+        Examples:
+            >>> import stim
+            >>> import numpy as np
+            >>> from bloqade.decoders import GurobiDecoder
+            >>> dem = stim.DetectorErrorModel(
+            ...     '''
+            ...     error(0.02) D0 L0
+            ...     error(0.1) D1 L0
+            ...     '''
+            ... )
+            >>> decoder = GurobiDecoder(dem)
+            >>> corrections = decoder.decode(np.array([True, False], dtype=bool))
+            >>> corrections
+            array([ True])
+            >>> corrections_batch = decoder.decode(np.array([[True, False], [False, True], [False, False], [True, True]], dtype=bool))
+            >>> corrections_batch
+            array([[ True],
+                [ True],
+                [False],
+                [False]])
+        """
         if detector_bits.ndim == 1:
             return self._decode(detector_bits)
         result, _ = self._decode_batch(detector_bits)
@@ -417,7 +500,8 @@ class GurobiDecoder(BaseDecoder):
         confidence is ``tanh(logical_gap / 2)``, a normalized likelihood margin
         in ``[0.0, 1.0]``. It is ``1.0`` when no alternative logical correction
         is feasible and ``0.0`` when the alternatives are equally likely or
-        either optimization does not find an optimal solution.
+        either optimization does not find an optimal solution. If the initial solve
+        is not optimal, the default correction applied is all 0's.
 
         This normalized margin is not a calibrated probability and is not on
         the same scale as :class:`TableDecoder`'s empirical confidence.
@@ -431,6 +515,38 @@ class GurobiDecoder(BaseDecoder):
         A single detector shot returns one correction and a scalar confidence.
         A batch returns corrections with shape ``(shots, num_observables)``
         and confidence scores with shape ``(shots,)``.
+
+        Args:
+            detector_bits: 1D (single shot) or 2D (batch) boolean array.
+
+        Returns:
+            A tuple where the first element is the observable corrections, and the second element is the confidence score.
+            The confidence score is either a float (for 1D inputs) or an array of floats (for 2D inputs).
+
+        Examples:
+            >>> import stim
+            >>> import numpy as np
+            >>> from bloqade.decoders import GurobiDecoder
+            >>> dem = stim.DetectorErrorModel(
+            ...     "error(0.02) D0 L0\\n"
+            ...     "error(0.1) D1 L0\\n"
+            ...     "error(0.0) D2"
+            ... )
+            >>> decoder = GurobiDecoder(dem)
+            >>> corrections_confidence = decoder.decode_confidence(np.array([True, False, False], dtype=bool))
+            >>> corrections_confidence
+            array([ True], 1.0)
+            >>> corrections_confidence_unseen = decoder.decode_confidence(np.array([True, False, True], dtype=bool)) # Impossible error configuration; initial solve is non-optimal
+            >>> corrections_confidence_unseen
+            array([ False], 0.0)
+            >>> corrections_batch_confidence = decoder.decode_confidence(np.array([[True, False, False], [False, True, True], [False, False, True], [True, True, False]], dtype=bool))
+            # Indices 1 and 2 have impossible error configurations
+            >>> corrections_batch_confidence
+            (array([[ True],
+                    [False],
+                    [False],
+                    [False]]),
+            array([1., 0., 0., 1.]))
         """
 
         single_shot = detector_bits.ndim == 1
