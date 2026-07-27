@@ -424,6 +424,10 @@ class GurobiDecoder(BaseDecoder):
         Confidence thresholds are therefore not interchangeable between the
         MLE and MLD decoders without calibration.
 
+        A simple alternative to calibrating the confidences across decoders would be to sort
+        the results of various decoders by confidence, and subsequently do thresholding
+        based on the accepted fraction of shots instead of by the raw confidence threshold value.
+
         A single detector shot returns one correction and a scalar confidence.
         A batch returns corrections with shape ``(shots, num_observables)``
         and confidence scores with shape ``(shots,)``.

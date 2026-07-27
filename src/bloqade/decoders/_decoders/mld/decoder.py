@@ -178,6 +178,10 @@ class TableDecoder(BaseDecoder):
         :class:`GurobiDecoder`'s normalized logical-gap confidence, even though
         both are in ``[0.0, 1.0]``. Confidence thresholds are therefore not
         interchangeable between the MLD and MLE decoders without calibration.
+
+        A simple alternative to using the confidence of each decoder would be to sort
+        the results of various decoders by confidence, and subsequently do thresholding
+        based on the accepted fraction of shots instead of by the raw confidence threshold value.
         """
         result = self.decode(detector_bits)
         packed = pack_boolean_array(detector_bits.reshape(-1, self.num_detectors))
