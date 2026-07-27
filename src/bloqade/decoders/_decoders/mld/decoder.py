@@ -84,7 +84,7 @@ class TableDecoder(BaseDecoder):
             ...     '''
             ... )
             >>> mld_decoder_10k = TableDecoder(dem) # Samples from the detector error model with 10,000 shots
-            >>> mld_decoder_1mill = mld_decoder_10k.train(num_shots=1_000_000) # Replaces the table with a new one sampled with 1_000_000 shots
+            >>> mld_decoder_10k.train(num_shots=1_000_000) # Replaces the table with a new one sampled with 1_000_000 shots
         """
         data_len = self.num_detectors + self.num_observables
         if data_len > 64:
@@ -212,8 +212,8 @@ class TableDecoder(BaseDecoder):
 
     def cache_correction(self) -> None:
         """
-        Build the maximum likelihood correction lookup table as well as computes confidence as the marginal probability
-        for each correction. Caches the correction lookup table and the confidence scores for later use.
+        Build the maximum likelihood correction lookup table as well as computes confidence as the empirical conditional fraction
+        (max observable count for syndrome / total count for syndrome). Caches the correction lookup table and the confidence scores for later use.
         """
         if not self._is_cached_correction:
             det_obs_counts = self._det_obs_counts
@@ -318,10 +318,10 @@ class TableDecoder(BaseDecoder):
             >>> decoder = TableDecoder(dem)
             >>> corrections_confidence = decoder.decode_confidence(np.array([True, False, False], dtype=bool))
             >>> corrections_confidence
-            array([ True], 1.0)
+            (array([ True]), 1.0)
             >>> corrections_confidence_unseen = decoder.decode_confidence(np.array([True, False, True], dtype=bool))
             >>> corrections_confidence_unseen
-            array([ False], 0.0)
+            (array([False]), 0.0)
             >>> corrections_batch_confidence = decoder.decode_confidence(np.array([[True, False, False], [False, True, True], [False, False, True], [True, True, False]], dtype=bool))
             >>> corrections_batch_confidence
             (array([[ True],
@@ -370,7 +370,7 @@ class TableDecoder(BaseDecoder):
             ...     "error(0.02) D0 L0\\n"
             ...     "error(0.1) D1 L0"
             ... )
-            >>> decoder = TableDecoder.instantiate(dem)
+            >>> decoder = TableDecoder(dem)
             >>> raw_counts = np.arange(8)
             >>> decoder.decode_det_obs_counts(raw_counts)
             array([0, 5, 6, 3, 4, 1, 2, 7])

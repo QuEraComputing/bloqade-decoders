@@ -535,12 +535,12 @@ class GurobiDecoder(BaseDecoder):
             >>> decoder = GurobiDecoder(dem)
             >>> corrections_confidence = decoder.decode_confidence(np.array([True, False, False], dtype=bool))
             >>> corrections_confidence
-            array([ True], 1.0)
+            (array([ True]), 1.0)
             >>> corrections_confidence_unseen = decoder.decode_confidence(np.array([True, False, True], dtype=bool)) # Impossible error configuration; initial solve is non-optimal
             >>> corrections_confidence_unseen
-            array([ False], 0.0)
+            (array([False]), 0.0)
             >>> corrections_batch_confidence = decoder.decode_confidence(np.array([[True, False, False], [False, True, True], [False, False, True], [True, True, False]], dtype=bool))
-            # Indices 1 and 2 have impossible error configurations
+            >>> # Indices 1 and 2 have impossible error configurations
             >>> corrections_batch_confidence
             (array([[ True],
                     [False],
