@@ -549,38 +549,6 @@ class GurobiDecoder(BaseDecoder):
                     [False],
                     [False]]),
             array([1., 0., 0., 1.]))
-
-        Args:
-            detector_bits: 1D (single shot) or 2D (batch) boolean array.
-
-        Returns:
-            A tuple where the first element is the observable corrections, and the second element is the confidence score.
-            The confidence score is either a float (for 1D inputs) or an array of floats (for 2D inputs).
-
-        Examples:
-            >>> import stim
-            >>> import numpy as np
-            >>> from bloqade.decoders import GurobiDecoder
-            >>> dem = stim.DetectorErrorModel(
-            ...     "error(0.02) D0 L0\\n"
-            ...     "error(0.1) D1 L0\\n"
-            ...     "error(0.0) D2"
-            ... )
-            >>> decoder = GurobiDecoder(dem)
-            >>> corrections_confidence = decoder.decode_confidence(np.array([True, False, False], dtype=bool))
-            >>> corrections_confidence
-            (array([ True]), 1.0)
-            >>> corrections_confidence_unseen = decoder.decode_confidence(np.array([True, False, True], dtype=bool)) # Impossible error configuration; initial solve is non-optimal
-            >>> corrections_confidence_unseen
-            (array([False]), 0.0)
-            >>> corrections_batch_confidence = decoder.decode_confidence(np.array([[True, False, False], [False, True, True], [False, False, True], [True, True, False]], dtype=bool))
-            >>> # Indices 1 and 2 have impossible error configurations
-            >>> corrections_batch_confidence
-            (array([[ True],
-                    [False],
-                    [False],
-                    [False]]),
-            array([1., 0., 0., 1.]))
         """
 
         single_shot = detector_bits.ndim == 1
