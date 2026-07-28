@@ -186,7 +186,7 @@ def test_nonoptimal_status_has_zero_confidence():
     assert confidence == 0.0
 
 
-def test_nonoptimal_alternative_solve_has_zero_confidence(monkeypatch):
+def test_nonoptimal_alternative_solve_returns_best_with_zero_confidence(monkeypatch):
     decoder = GurobiDecoder(stim.DetectorErrorModel("error(0.1) D0 L0"))
     best = decoder._ConfidenceSolveResult(
         error=np.array([True]),
@@ -203,8 +203,13 @@ def test_nonoptimal_alternative_solve_has_zero_confidence(monkeypatch):
 
     result, confidence = decoder.decode_confidence(np.array([[True]], dtype=bool))
 
-    np.testing.assert_array_equal(result, np.array([[False]]))
+    np.testing.assert_array_equal(result, np.array([[True]]))
     np.testing.assert_array_equal(confidence, np.array([0.0]))
+
+    result, confidence = decoder.decode_confidence(np.array([True], dtype=bool))
+
+    np.testing.assert_array_equal(result, np.array([True]))
+    assert confidence == 0.0
 
 
 # --- SinterGurobiDecoder tests ---
