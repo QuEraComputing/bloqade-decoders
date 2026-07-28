@@ -469,6 +469,7 @@ class GurobiDecoder(BaseDecoder):
             if not best_converged:
                 continue
             assert best is not None
+            decoded_obs[shot_idx] = best.logical
             second, second_converged = self._solve_single_shot_for_confidence(
                 detector_shot,
                 verbose=verbose,
@@ -476,7 +477,6 @@ class GurobiDecoder(BaseDecoder):
             )
             if not second_converged:
                 continue
-            decoded_obs[shot_idx] = best.logical
             logical_gaps[shot_idx] = (
                 np.inf if second is None else best.objective - second.objective
             )
@@ -500,8 +500,10 @@ class GurobiDecoder(BaseDecoder):
         confidence is ``tanh(logical_gap / 2)``, a normalized likelihood margin
         in ``[0.0, 1.0]``. It is ``1.0`` when no alternative logical correction
         is feasible and ``0.0`` when the alternatives are equally likely or
-        either optimization does not find an optimal solution. If the initial solve
-        is not optimal, the default correction applied is all 0's.
+        either optimization does not find an optimal solution. If the initial
+        solve is not optimal, the default correction is all zeros. If only the
+        alternative solve is not optimal, the best correction from the initial
+        solve is returned with ``0.0`` confidence.
 
         This normalized margin is not a calibrated probability and is not on
         the same scale as :class:`TableDecoder`'s empirical confidence.
