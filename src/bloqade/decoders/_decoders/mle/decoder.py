@@ -37,6 +37,18 @@ class GurobiDecoder(BaseDecoder):
         ... )
         >>> mle_decoder = GurobiDecoder(dem)
         >>> mle_decoder_verbose = GurobiDecoder(dem, verbose=True)
+
+    Examples:
+        >>> from bloqade.decoders import GurobiDecoder
+        >>> import stim
+        >>> dem = stim.DetectorErrorModel(
+        ...     '''
+        ...     error(0.02) D0 L0
+        ...     error(0.1) D1 L0
+        ...     '''
+        ... )
+        >>> mle_decoder = GurobiDecoder(dem)
+        >>> mle_decoder_verbose = GurobiDecoder(dem, verbose=True)
     """
 
     _env: ClassVar[GurobiEnv | None] = None
@@ -165,6 +177,7 @@ class GurobiDecoder(BaseDecoder):
 
     def weight_from_error(self, error: np.ndarray) -> np.ndarray:
         """Return the log-odds objective value for each error configuration."""
+        """Return the log-odds objective value for each error configuration."""
         return np.sum(error * self._weights, axis=1)
 
     def _decode_error(
@@ -271,6 +284,47 @@ class GurobiDecoder(BaseDecoder):
                    [ True],
                    [False]])
         """
+        """Convert batched error configurations into logical-observable flips.
+
+        Each row of ``errors`` selects the variable error mechanisms in the
+        flattened detector error model. Columns follow the order of error
+        instructions with probabilities strictly between zero and one; errors
+        with probability one are applied automatically. The logical targets of
+        the selected mechanisms are combined modulo two.
+
+        Args:
+            errors: Boolean array with shape
+                ``(num_shots, num_error_variables)``.
+
+        Returns:
+            Boolean array with shape ``(num_shots, num_observables)``.
+
+        Examples:
+            >>> import stim
+            >>> import numpy as np
+            >>> from bloqade.decoders import GurobiDecoder
+            >>> dem = stim.DetectorErrorModel(
+            ...     '''
+            ...     error(0.02) D0 L0
+            ...     error(0.1) D1 L0
+            ...     '''
+            ... )
+            >>> decoder = GurobiDecoder(dem)
+            >>> errors = np.array(
+            ...     [
+            ...         [False, False],
+            ...         [True, False],
+            ...         [False, True],
+            ...         [True, True],
+            ...     ],
+            ...     dtype=bool,
+            ... )
+            >>> decoder.logical_from_error(errors)
+            array([[False],
+                   [ True],
+                   [ True],
+                   [False]])
+        """
         num_shots = errors.shape[0]
         observable_indices = self._observable_indices
         # Start from certain error contributions (prob=1.0 errors always fire)
@@ -298,6 +352,36 @@ class GurobiDecoder(BaseDecoder):
         return result[0]
 
     def decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
+        """
+        Decode a batch or single shot of detector bits.
+
+        Args:
+            detector_bits: 1D (single shot) or 2D (batch) boolean array.
+
+        Returns:
+            Observable corrections as boolean array.
+
+        Examples:
+            >>> import stim
+            >>> import numpy as np
+            >>> from bloqade.decoders import GurobiDecoder
+            >>> dem = stim.DetectorErrorModel(
+            ...     '''
+            ...     error(0.02) D0 L0
+            ...     error(0.1) D1 L0
+            ...     '''
+            ... )
+            >>> decoder = GurobiDecoder(dem)
+            >>> corrections = decoder.decode(np.array([True, False], dtype=bool))
+            >>> corrections
+            array([ True])
+            >>> corrections_batch = decoder.decode(np.array([[True, False], [False, True], [False, False], [True, True]], dtype=bool))
+            >>> corrections_batch
+            array([[ True],
+                [ True],
+                [False],
+                [False]])
+        """
         """
         Decode a batch or single shot of detector bits.
 
