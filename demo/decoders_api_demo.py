@@ -27,8 +27,9 @@
 import stim
 
 demo_dem = stim.DetectorErrorModel("""
-    error(0.09) D0 L0 L1
-    error(0.1) D0 L1 L2
+    error(0.1) D0
+    error(0.09) D0 D1
+    error(0.11) D1 L0
 """)
 
 # %%
@@ -63,24 +64,24 @@ import numpy as np
 
 # %%
 lookup_table_correction = lookup_table_decoder_1millionshots.decode(
-    detector_bits=np.array([True])
+    detector_bits=np.array([True, True])
 )
 
 # %%
-# Returns the correction for L1 and L2 as those observable flips; the most frequently seen corrections.
+# Returns no flip for L0; the most frequently seen correction.
 print(lookup_table_correction)
 
 # %%
-mle_correction = mle_decoder.decode(detector_bits=np.array([True]))
+mle_correction = mle_decoder.decode(detector_bits=np.array([True, True]))
 
 # %%
-# Returns the most likely error; in this case, the error that triggers D0, L1, and L2.
+# Returns the observable flip associated with the most likely error; in this case, the error that flips D0 and D1 but does not flip L0.
 print(mle_correction)
 
 # %%
 # We can also get corrections in batches by supplying multiple detector patterns.
 lookup_table_correction_batched = lookup_table_decoder_1millionshots.decode(
-    detector_bits=np.array([[True], [False]])
+    detector_bits=np.array([[True, True], [False, True]])
 )
 
 # %%
@@ -90,8 +91,8 @@ print(lookup_table_correction_batched)
 mle_correction_batched = mle_decoder.decode(
     detector_bits=np.array(
         [
-            [True],
-            [False],
+            [True, True],
+            [False, True],
         ]
     )
 )
@@ -102,33 +103,35 @@ print(mle_correction_batched)
 # %% [markdown]
 # ## Obtaining Confidence from Decoding
 # Using the `decode_confidence(detectors)` method, you can additionally obtain a confidence value regarding how "confident" you are in your decoding. Understanding this confidence score will vary based on the decoder, but generally the scores will be in the interval `[0.0, 1.0]` where a higher value indicates a higher confidence in decoding.
-# > For the TableDecoder, the confidence for a given observable correction is computed by the fraction of shots seen for that correction divided by the total number of shots seen for that detector; for the GurobiDecoder, the confidence is the ratio of the probability of the most likely error and the second most likely error.
+# > For the TableDecoder, the confidence for a given observable correction is computed by the fraction of shots seen for that correction divided by the total number of shots seen for that detector; for the GurobiDecoder, the confidence is a normalized ratio of the probability of the most likely error and the second most likely error.
 #
 # The inputs for `decode_confidence` is the same as `decode`. `decode_confidence` additionally returns a float or array of floats representing the confidence score for each detector.
 # > The default implementation of `decode_confidence` returns all corrections as equally confident (1.0).
 
 # %%
 lookup_table_correction_confidence = (
-    lookup_table_decoder_1millionshots.decode_confidence(detector_bits=np.array([True]))
+    lookup_table_decoder_1millionshots.decode_confidence(
+        detector_bits=np.array([True, True])
+    )
 )
 
 # %%
-# The confidence here is roughly (0.1 / (0.1 + 0.09)).
+# The confidence here is roughly the probability of the second error mechanism divided by the total probability of D0 and D1 triggering.
 print(lookup_table_correction_confidence)
 
 # %%
 mle_correction_confidence = mle_decoder.decode_confidence(
-    detector_bits=np.array([True])
+    detector_bits=np.array([True, True])
 )
 
 # %%
-# The confidence here is small due to the most likely and second most likely correction being similarly probable.
+# The confidence here is fairly large due to the probability of the most likely error being quite larger than the second most likely error.
 print(mle_correction_confidence)
 
 # %%
 lookup_table_correction_confidence_batch = (
     lookup_table_decoder_1millionshots.decode_confidence(
-        detector_bits=np.array([[True], [False]])
+        detector_bits=np.array([[True, True], [False, True]])
     )
 )
 
@@ -137,7 +140,7 @@ print(lookup_table_correction_confidence_batch)
 
 # %%
 mle_correction_confidence_batch = mle_decoder.decode_confidence(
-    detector_bits=np.array([[True], [False]])
+    detector_bits=np.array([[True, True], [False, True]])
 )
 
 # %%
