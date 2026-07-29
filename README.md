@@ -113,3 +113,6 @@ decoder = TableDecoder(dem, num_shots=100_000)
 
 corrections = decoder.decode(syndromes)
 ```
+
+## Quick Start
+For a short demonstration of using the `TableDecoder` and `GurobiDecoder`, you can refer to [this script](demo/decoders_api_demo.py).
