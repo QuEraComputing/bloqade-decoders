@@ -9,6 +9,7 @@ def test_decoder_exports():
     assert hasattr(decoders, "MWPFDecoder")
     assert hasattr(decoders, "GurobiDecoder")
     assert hasattr(decoders, "TableDecoder")
+    assert hasattr(decoders, "LinearTableDecoder")
     assert hasattr(decoders, "dialects")
 
     assert hasattr(decoders, "Detector")

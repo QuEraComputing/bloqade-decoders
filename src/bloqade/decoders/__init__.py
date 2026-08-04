@@ -7,6 +7,7 @@ from ._decoders import (
     BpLsdDecoder as BpLsdDecoder,
     BpOsdDecoder as BpOsdDecoder,
     TableDecoder as TableDecoder,
+    LinearTableDecoder as LinearTableDecoder,
     GurobiDecoder as GurobiDecoder,
     TesseractDecoder as TesseractDecoder,
     BeliefFindDecoder as BeliefFindDecoder,
