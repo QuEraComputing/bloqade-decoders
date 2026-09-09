@@ -144,7 +144,7 @@ requires-dist = [
     { name = "kirin-toolchain", specifier = "~=0.22.2" },
     { name = "ldpc", specifier = ">=2.4.1" },
     { name = "mwpf", extras = ["stim"], marker = "extra == 'mwpf'", specifier = ">=0.2.12" },
-    { name = "numpy", specifier = ">=2.2.6" },
+    { name = "numpy", specifier = ">=1.26.4" },
     { name = "polars", marker = "extra == 'mld'", specifier = ">=1.38.1" },
     { name = "scipy", marker = "extra == 'mle'", specifier = ">=1.14.0" },
     { name = "sinter", marker = "extra == 'sinter'", specifier = ">=1.16.0.dev0" },
