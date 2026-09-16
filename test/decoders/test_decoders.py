@@ -1,3 +1,5 @@
+import inspect
+
 import numpy as np
 import pytest
 
@@ -24,7 +26,9 @@ from .two_logical_ref import (
 def _all_decoder_subclasses(decoder_cls):
     subclasses = []
     for subclass in decoder_cls.__subclasses__():
-        if subclass.__module__.startswith("bloqade.decoders._decoders."):
+        if subclass.__module__.startswith(
+            "bloqade.decoders._decoders."
+        ) and not inspect.isabstract(subclass):
             subclasses.append(subclass)
         subclasses.extend(_all_decoder_subclasses(subclass))
     return subclasses

@@ -425,3 +425,18 @@ def test_decode_confidence_includes_prob_one_error_contributions():
     np.testing.assert_array_equal(result, np.array([[True], [False]]))
     assert isinstance(confidence, np.ndarray)
     np.testing.assert_array_equal(confidence, np.ones(2))
+
+
+def test_gurobi_decoder_emits_deprecation_warning():
+    with pytest.warns(DeprecationWarning, match="MILPDecoder"):
+        GurobiDecoder(regular_dem())
+
+
+def test_gurobi_decoder_instantiate_emits_deprecation_warning():
+    with pytest.warns(DeprecationWarning, match="MILPDecoder"):
+        GurobiDecoder.instantiate(regular_dem())
+
+
+def test_sinter_gurobi_compile_emits_deprecation_warning():
+    with pytest.warns(DeprecationWarning, match="MILPDecoder"):
+        SinterGurobiDecoder().compile_decoder_for_dem(dem=simple_dem())

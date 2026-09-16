@@ -27,6 +27,10 @@ mle = [
     "gurobipy>=13.0.1",
     "scipy>=1.14.0",
 ]
+milp = [
+    "highspy>=1.11.0",
+    "pulp>=2.9.0",
+]
 mld = [
     "polars>=1.38.1",
     "tqdm>=4.67.0",
@@ -50,11 +54,13 @@ dev = [
     "black>=24.10.0",
     "coverage>=7.6.4",
     "gurobipy>=13.0.1",
+    "highspy>=1.11.0",
     "ipython>=8.29.0",
     "isort>=5.13.2",
     "mypy>=1.13.0",
     "polars>=1.38.1",
     "pre-commit>=4.0.1",
+    "pulp>=2.9.0",
     "pyright>=1.1.388",
     "pytest>=8.3.3",
     "ruff>=0.7.3",
