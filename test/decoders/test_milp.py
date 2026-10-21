@@ -149,6 +149,25 @@ def test_decode_raises_on_non_optimal_status():
         decoder.decode(np.array([True], dtype=bool))
 
 
+@pytest.mark.parametrize("batched", [False, True])
+def test_decode_rejects_integer_feasible_solution(monkeypatch, batched):
+    import pulp
+
+    decoder = MILPDecoder(stim.DetectorErrorModel("error(0.1) D0 L0"))
+    solve_prob = decoder._solve_prob
+
+    def solve(verbose=None):
+        solve_prob(verbose)
+        # HiGHS can report this pair when a time limit leaves an incumbent.
+        decoder._prob.assignStatus(pulp.LpStatusOptimal, pulp.LpSolutionIntegerFeasible)
+
+    monkeypatch.setattr(decoder, "_solve_prob", solve)
+    syndrome = np.array([[True]] if batched else [True], dtype=bool)
+
+    with pytest.raises(pulp.PulpSolverError, match="no optimal solution"):
+        decoder.decode(syndrome)
+
+
 def test_separator_targets_rejected():
     dem = stim.DetectorErrorModel("""
         error(0.1) D0 ^ D1 L0
@@ -203,6 +222,48 @@ def test_milp_decoder_can_instantiate_without_training():
     result = decoder.decode(det_shots)
 
     np.testing.assert_array_equal(result, obs_shots)
+
+
+@pytest.mark.parametrize("solver", SOLVERS)
+@pytest.mark.parametrize("batched", [False, True])
+@pytest.mark.parametrize("probability", [0.1, 0.5, 0.9])
+@pytest.mark.parametrize(
+    "dem_text",
+    ["error(0.1) D0 L0", "error(0.75) D0 L0\nerror(0.25) D0"],
+)
+def test_targetless_error_preserves_decoding(solver, batched, probability, dem_text):
+    dem = stim.DetectorErrorModel(dem_text)
+    reference = MILPDecoder(dem, solver=solver)
+    dem += stim.DetectorErrorModel(f"error({probability})")
+    decoder = MILPDecoder(dem, solver=solver)
+    syndrome = np.array([[True], [False]] if batched else [True], dtype=bool)
+
+    expected_result = reference.decode(syndrome)
+    expected_obs, expected_confidence = reference.decode_confidence(syndrome)
+    np.testing.assert_array_equal(decoder.decode(syndrome), expected_result)
+    obs, confidence = decoder.decode_confidence(syndrome)
+    np.testing.assert_array_equal(obs, expected_obs)
+    np.testing.assert_allclose(confidence, expected_confidence)
+
+    # Keep the targetless mechanism's column and its most-likely assignment.
+    errors = decoder._decode_error(syndrome.reshape(-1, 1))
+    assert errors.shape == (syndrome.size, len(reference._weights) + 1)
+    np.testing.assert_array_equal(errors[:, -1], probability > 0.5)
+    np.testing.assert_array_equal(
+        decoder.logical_from_error(errors), expected_result.reshape(-1, 1)
+    )
+
+
+@pytest.mark.parametrize("solver", SOLVERS)
+@pytest.mark.parametrize("batched", [False, True])
+def test_only_targetless_half_probability_error(solver, batched):
+    decoder = MILPDecoder(stim.DetectorErrorModel("error(0.5)"), solver=solver)
+    syndrome = np.zeros((2, 0) if batched else (0,), dtype=bool)
+
+    np.testing.assert_array_equal(decoder.decode(syndrome), syndrome)
+    obs, confidence = decoder.decode_confidence(syndrome)
+    np.testing.assert_array_equal(obs, syndrome)
+    np.testing.assert_array_equal(confidence, np.ones(2) if batched else 1.0)
 
 
 def test_prob_zero_error_skipped():
@@ -305,6 +366,42 @@ def test_nonoptimal_status_has_zero_confidence(solver):
 
     np.testing.assert_array_equal(result, np.array([False]))
     assert confidence == 0.0
+
+
+@pytest.mark.parametrize("batched", [False, True])
+@pytest.mark.parametrize("nonoptimal_solve", [1, 2])
+def test_integer_feasible_solution_has_zero_confidence(
+    monkeypatch, batched, nonoptimal_solve
+):
+    import pulp
+
+    decoder = MILPDecoder(stim.DetectorErrorModel("""
+        error(0.75) D0 L0
+        error(0.25) D0
+        """))
+    solve_prob = decoder._solve_prob
+    num_solves = 0
+    original_constraints = set(decoder._prob.constraints)
+
+    def solve(verbose=None):
+        nonlocal num_solves
+        solve_prob(verbose)
+        num_solves += 1
+        if num_solves == nonoptimal_solve:
+            decoder._prob.assignStatus(
+                pulp.LpStatusOptimal, pulp.LpSolutionIntegerFeasible
+            )
+
+    monkeypatch.setattr(decoder, "_solve_prob", solve)
+    syndrome = np.array([[True]] if batched else [True], dtype=bool)
+
+    result, confidence = decoder.decode_confidence(syndrome)
+
+    expected = np.full(syndrome.shape, nonoptimal_solve == 2, dtype=bool)
+    np.testing.assert_array_equal(result, expected)
+    np.testing.assert_array_equal(confidence, np.array([0.0]) if batched else 0.0)
+    assert num_solves == nonoptimal_solve
+    assert set(decoder._prob.constraints) == original_constraints
 
 
 def test_nonoptimal_alternative_solve_returns_best_with_zero_confidence(monkeypatch):

@@ -112,7 +112,17 @@ decoder = MILPDecoder(dem, solver="COPT", RelGap=0.0, AbsGap=0.0)
 corrections = decoder.decode(syndromes)
 ```
 
-The `GurobiDecoder` is deprecated; use `MILPDecoder` instead.
+To see different solver options, as per the [`PuLP` documentation](https://coin-or.github.io/pulp/guides/how_to_configure_solvers.html), you can run
+
+```python
+import pulp as pl
+solver_list = pl.listSolvers()
+print(solver_list)
+# ['GLPK_CMD', 'PYGLPK', 'CPLEX_CMD', 'CPLEX_PY', 'CPLEX_DLL', 'GUROBI', 'GUROBI_CMD', 'MOSEK', 'XPRESS', 'COIN_CMD', 'COINMP_DLL', 'CHOCO_CMD', 'MIPCL_CMD', 'SCIP_CMD', 'CPSAT', ...]
+```
+
+
+The `GurobiDecoder` is deprecated; use `MILPDecoder(dem, solver="GUROBI")` instead.
 
 The `TableDecoder` takes a DEM directly and trains by sampling from that DEM:
 

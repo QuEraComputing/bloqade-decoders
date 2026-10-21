@@ -46,7 +46,7 @@ class GurobiDecoder(BaseMLEDecoder):
         import warnings
 
         warnings.warn(
-            "GurobiDecoder is deprecated; use MILPDecoder instead, which "
+            "GurobiDecoder is deprecated; use MILPDecoder(dem, solver='GUROBI') instead. MILPDecoder "
             "supports multiple solver backends (HiGHS, CPLEX, COPT, Gurobi) "
             "through PuLP.",
             DeprecationWarning,

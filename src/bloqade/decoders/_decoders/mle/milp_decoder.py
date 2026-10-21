@@ -134,6 +134,15 @@ class MILPDecoder(BaseMLEDecoder):
             w * self._error_variables[i] for i, w in enumerate(self._weights)
         )
 
+        referenced_errors = {
+            j for vertices in self._detector_vertices for j in vertices
+        } | {j for indices in self._observable_indices for j in indices}
+        for i, weight in enumerate(self._weights):
+            if weight == 0 and i not in referenced_errors:
+                # Targetless p=0.5 errors otherwise vanish from PuLP's model.
+                # Either assignment is equally likely; retain the column as zero.
+                self._prob += self._error_variables[i] == 0, "efix" + str(i)
+
         self._detector_constraints: list[pulp.LpConstraint] = []
         for i, dv in enumerate(self._detector_vertices):
             detector_variable = pulp.LpVariable(
@@ -238,10 +247,13 @@ class MILPDecoder(BaseMLEDecoder):
             self._set_syndrome(detector_shot)
             self._solve_prob()
             status = pulp.LpStatus[self._prob.status]
-            if status != "Optimal":
+            # HiGHS may report Optimal with only a feasible incumbent on timeout.
+            if status != "Optimal" or self._prob.sol_status != pulp.LpSolutionOptimal:
+                solution_status = pulp.LpSolution[self._prob.sol_status]
                 raise pulp.PulpSolverError(
                     f"MILPDecoder found no optimal solution for shot {d}: "
-                    f"solver status is {status!r}. No fallback correction "
+                    f"solver status is {status!r}, solution status is "
+                    f"{solution_status!r}. No fallback correction "
                     "is returned; catch this error to retry or skip the shot."
                 )
             errors[d, :] = np.round(
@@ -288,9 +300,13 @@ class MILPDecoder(BaseMLEDecoder):
             status = pulp.LpStatus[self._prob.status]
             if status == "Infeasible" and forbidden_logical is not None:
                 return None, True
-            if status != "Optimal":
+            if status != "Optimal" or self._prob.sol_status != pulp.LpSolutionOptimal:
                 if verbose:
-                    print("Did not find optimal solution", status)
+                    print(
+                        "Did not find optimal solution",
+                        status,
+                        pulp.LpSolution[self._prob.sol_status],
+                    )
                 return None, False
 
             error = np.round(
