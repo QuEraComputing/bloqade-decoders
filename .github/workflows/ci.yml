@@ -67,6 +67,9 @@ jobs:
               exit 1
             fi
         - name: post covearge
+          # Fork pull requests only get a read-only GITHUB_TOKEN, so the
+          # coverage comment cannot be posted for them.
+          if: github.event.pull_request.head.repo.full_name == github.repository
           uses: orgoro/coverage@v3.3
           with:
             coverageFile: coverage.xml
