@@ -18,7 +18,9 @@ dependencies = [
 
 [project.optional-dependencies]
 tesseract = [
-    "tesseract-decoder>=0.1.1.dev20260109233451",
+    "tesseract-decoder>=0.1.1.dev20260109233451; python_version < '3.14'",
+    # Earlier builds ship no cp314 wheels; their 3.13 wheel fails to import on 3.14.
+    "tesseract-decoder>=0.1.1.dev20260825204238; python_version >= '3.14'",
 ]
 mwpf = [
     "mwpf[stim]>=0.2.12",
