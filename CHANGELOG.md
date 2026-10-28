@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0-DEV
+
+### Breaking changes
+
+- Dropped support for Python 3.10, which reaches end of life in October 2026.
+  `bloqade-decoders` now requires Python 3.11 or newer.
+
+### Other changes
+
+- Added Python 3.14 to CI.
+
 ## 0.7.0-DEV
 
 ### Breaking changes

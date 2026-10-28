@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Any, TypeVar
+from typing import Any, Self, TypeVar
 
 import stim
 import numpy as np
 import numpy.typing as npt
-from typing_extensions import Self
 
 DecoderT = TypeVar("DecoderT", bound="BaseDecoder")
 

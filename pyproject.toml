@@ -7,7 +7,7 @@ authors = [
     { name = "johnzl-777", email="jlong@quera.com"},
     { name = "rafaelha", email="rhaenel@quera.com"}
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "beliefmatching>=0.2.0",
     "kirin-toolchain~=0.22.2",
@@ -18,7 +18,9 @@ dependencies = [
 
 [project.optional-dependencies]
 tesseract = [
-    "tesseract-decoder>=0.1.1.dev20260109233451",
+    "tesseract-decoder>=0.1.1.dev20260109233451; python_version < '3.14'",
+    # Earlier builds ship no cp314 wheels; their 3.13 wheel fails to import on 3.14.
+    "tesseract-decoder>=0.1.1.dev20260825204238; python_version >= '3.14'",
 ]
 mwpf = [
     "mwpf[stim]>=0.2.12",
@@ -81,7 +83,7 @@ src_paths = ["src/bloqade"]
 line-length = 88
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 exclude = [
     ".bzr",
     ".direnv",

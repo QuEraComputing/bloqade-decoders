@@ -571,7 +571,7 @@ def consistency_dems() -> dict[str, stim.DetectorErrorModel]:
 
 
 def sample_syndromes(dem: stim.DetectorErrorModel, num_shots: int = 20) -> np.ndarray:
-    sampler = dem.compile_sampler()
+    sampler = dem.compile_sampler(seed=0)
     det, _, _ = sampler.sample(num_shots, bit_packed=False)
     return det
 
