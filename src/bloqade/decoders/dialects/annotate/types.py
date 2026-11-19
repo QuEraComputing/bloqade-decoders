@@ -39,6 +39,21 @@ class MeasurementResultValue(IntEnum):
     One = 1
     Lost = 2
 
+    @property
+    def symbol(self) -> str:
+        """Single-character symbol: '0', '1', or 'L' (Lost)."""
+        return {
+            MeasurementResultValue.Zero: "0",
+            MeasurementResultValue.One: "1",
+            MeasurementResultValue.Lost: "L",
+        }[self]
+
+    def __repr__(self) -> str:
+        """Return the single-character `symbol` of this value."""
+        return self.symbol
+
+    __str__ = __repr__
+
     def __xor__(self, other: Any) -> "MeasurementResultValue":
         """Return Lost-aware XOR of this value with ``other``."""
         rhs = _as_measurement_value(other)
@@ -72,6 +87,10 @@ class MeasurementResult:
     """
 
     value: MeasurementResultValue
+
+    def __repr__(self) -> str:
+        """Return the single-character `symbol` of the underlying value."""
+        return self.value.symbol
 
     def __xor__(self, other: Any) -> "MeasurementResult":
         """Return Lost-aware XOR of this result with ``other``."""
