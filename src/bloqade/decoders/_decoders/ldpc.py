@@ -2,12 +2,12 @@ from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
-from beliefmatching import detector_error_model_to_check_matrices
 from ldpc.bplsd_decoder import BpLsdDecoder as LdpcBpLsdDecoder
 from ldpc.bposd_decoder import BpOsdDecoder as LdpcBpOsdDecoder
 from ldpc.belief_find_decoder import BeliefFindDecoder as LdpcBeliefFindDecoder
 
 from .base import BaseDecoder
+from ._dem_matrices import dem_to_check_matrices
 
 
 class BeliefFindDecoder(BaseDecoder):
@@ -51,9 +51,7 @@ class BeliefFindDecoder(BaseDecoder):
         bits_per_step: int = 0,
         **_kwargs: Any,
     ):
-        dem_matrix = detector_error_model_to_check_matrices(
-            self.dem, allow_undecomposed_hyperedges=True
-        )
+        dem_matrix = dem_to_check_matrices(self.dem)
         self._observable_matrix = dem_matrix.observables_matrix
 
         self._decoder = LdpcBeliefFindDecoder(
@@ -121,9 +119,7 @@ class BpLsdDecoder(BaseDecoder):
         lsd_method: Literal["LSD_0", "LSD_E", "LSD_CS"] = "LSD_0",
         **_kwargs: Any,
     ):
-        dem_matrix = detector_error_model_to_check_matrices(
-            self.dem, allow_undecomposed_hyperedges=True
-        )
+        dem_matrix = dem_to_check_matrices(self.dem)
         self._observable_matrix = dem_matrix.observables_matrix
 
         self._decoder = LdpcBpLsdDecoder(
@@ -187,9 +183,7 @@ class BpOsdDecoder(BaseDecoder):
         osd_order: int = 0,
         **_kwargs: Any,
     ):
-        dem_matrix = detector_error_model_to_check_matrices(
-            self.dem, allow_undecomposed_hyperedges=True
-        )
+        dem_matrix = dem_to_check_matrices(self.dem)
         self._observable_matrix = dem_matrix.observables_matrix
 
         self._decoder = LdpcBpOsdDecoder(

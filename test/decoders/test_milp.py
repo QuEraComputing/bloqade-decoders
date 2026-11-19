@@ -243,7 +243,9 @@ def test_targetless_error_preserves_decoding(solver, batched, probability, dem_t
     np.testing.assert_array_equal(decoder.decode(syndrome), expected_result)
     obs, confidence = decoder.decode_confidence(syndrome)
     np.testing.assert_array_equal(obs, expected_obs)
-    np.testing.assert_allclose(confidence, expected_confidence)
+    # Tied logical classes give a confidence of exactly 0, which comes out as
+    # ~1e-16 rounding noise; rtol alone cannot compare values that small.
+    np.testing.assert_allclose(confidence, expected_confidence, atol=1e-12)
 
     # Keep the targetless mechanism's column and its most-likely assignment.
     errors = decoder._decode_error(syndrome.reshape(-1, 1))
