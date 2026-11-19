@@ -91,13 +91,9 @@ class MeasurementResult:
 class Detector:
     """Type marker returned when a detector parity is declared."""
 
-    pass
-
 
 class Observable:
     """Type marker returned when an observable parity is declared."""
-
-    pass
 
 
 # Kirin IR types

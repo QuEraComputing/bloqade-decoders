@@ -1,6 +1,6 @@
 [project]
 name = "bloqade-decoders"
-version = "0.7.0-DEV"
+version = "0.8.0-DEV"
 description = "Decoder related statements and interfaces for Bloqade."
 readme = "README.md"
 authors = [
@@ -9,10 +9,10 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "beliefmatching>=0.2.0",
     "kirin-toolchain~=0.22.2",
     "ldpc>=2.4.1",
-    "numpy>=2.2.6",
+    "numpy>=1.26.4",
+    "scipy>=1.9.3",
     "stim>=1.15.0",
 ]
 
@@ -26,6 +26,10 @@ mwpf = [
 mle = [
     "gurobipy>=13.0.1",
     "scipy>=1.14.0",
+]
+milp = [
+    "highspy>=1.11.0",
+    "pulp>=2.9.0",
 ]
 mld = [
     "polars>=1.38.1",
@@ -50,11 +54,13 @@ dev = [
     "black>=24.10.0",
     "coverage>=7.6.4",
     "gurobipy>=13.0.1",
+    "highspy>=1.11.0",
     "ipython>=8.29.0",
     "isort>=5.13.2",
     "mypy>=1.13.0",
     "polars>=1.38.1",
     "pre-commit>=4.0.1",
+    "pulp>=2.9.0",
     "pyright>=1.1.388",
     "pytest>=8.3.3",
     "ruff>=0.7.3",
@@ -101,6 +107,19 @@ exclude = [
 
 [tool.ruff.lint]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+ignore = [
+    # Import ordering is owned by the dedicated isort pre-commit hook (profile
+    # black); leaving it to ruff too would make the two tools fight.
+    "I001",
+    # `from x import y as y` is the explicit re-export idiom pyright requires;
+    # ruff would otherwise strip the alias and break re-export detection.
+    "PLC0414",
+    # PLR0402's autofix rewrites `import pkg.sub as sub` to `from pkg import
+    # sub`, which is NOT equivalent here: the former guarantees the submodule,
+    # the latter resolves via pkg/__init__ and makes pyright lose the
+    # submodule's types (breaks squin/gemini attribute typing).
+    "PLR0402",
+]
 
 [tool.coverage.run]
 include = ["src/bloqade/*"]
