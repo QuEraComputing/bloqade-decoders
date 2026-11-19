@@ -1,16 +1,23 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import stim
 import numpy as np
 from sinter import Decoder as _SinterDecoder, CompiledDecoder as _SinterCompiledDecoder
 
-from .decoder import GurobiDecoder
+from .base import BaseMLEDecoder
+from .milp_decoder import MILPDecoder
+from .gurobi_decoder import GurobiDecoder
+
+if TYPE_CHECKING:
+    import pulp
 
 
-class _CompiledGurobiDecoder(_SinterCompiledDecoder):
-    """Compiled decoder wrapping GurobiDecoder for sinter."""
+class _CompiledMLEDecoder(_SinterCompiledDecoder):
+    """Compiled decoder wrapping an MLE decoder for sinter."""
 
-    def __init__(self, decoder: GurobiDecoder) -> None:
+    def __init__(self, decoder: BaseMLEDecoder) -> None:
         self._decoder = decoder
 
     def decode_shots_bit_packed(
@@ -42,4 +49,25 @@ class SinterGurobiDecoder(_SinterDecoder):
         dem: stim.DetectorErrorModel,
     ) -> _SinterCompiledDecoder:
         decoder = GurobiDecoder(dem)
-        return _CompiledGurobiDecoder(decoder)
+        return _CompiledMLEDecoder(decoder)
+
+
+class SinterMILPDecoder(_SinterDecoder):
+    """Sinter-compatible adapter for the PuLP-based MILPDecoder (MLE).
+
+    Args:
+        solver: Name of a PuLP solver (e.g. ``"HiGHS"``, ``"CPLEX_PY"``,
+            ``"COPT"``, ``"GUROBI"``) or a ``pulp.LpSolver`` instance.
+            Defaults to ``"HiGHS"``.
+    """
+
+    def __init__(self, solver: str | pulp.LpSolver = "HiGHS") -> None:
+        self._solver = solver
+
+    def compile_decoder_for_dem(
+        self,
+        *,
+        dem: stim.DetectorErrorModel,
+    ) -> _SinterCompiledDecoder:
+        decoder = MILPDecoder(dem, solver=self._solver)
+        return _CompiledMLEDecoder(decoder)
