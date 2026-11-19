@@ -13,7 +13,8 @@ Interfaces also exist for the following optional decoders, which are not include
 
 - MWPF - through `bloqade.decoders.MWPFDecoder` ([MWPF](https://github.com/yuewuo/mwpf))
 - Tesseract - through `bloqade.decoders.TesseractDecoder` ([Tesseract](https://github.com/quantumlib/tesseract-decoder))
-- MLE (Gurobi) - through `bloqade.decoders.GurobiDecoder`, finds the most likely error pattern via mixed-integer programming
+- MLE (MILP) - through `bloqade.decoders.MILPDecoder`, finds the most likely error pattern via mixed-integer programming (PuLP; HiGHS works out of the box, CPLEX/COPT/Gurobi backends optional)
+- MLE (Gurobi, deprecated) - through `bloqade.decoders.GurobiDecoder`; use `MILPDecoder` instead
 - MLD (Table Lookup) - through `bloqade.decoders.TableDecoder`, builds a lookup table from sampled data
 
 Sinter-compatible adapters for MLE and MLD are also available through `bloqade.decoders.sinter_interface`.
@@ -41,7 +42,13 @@ Or for MWPF do:
 pip install bloqade-decoders[mwpf]
 ```
 
-For MLE (a full [Gurobi license](https://www.gurobi.com/academia/academic-program-and-licenses/) is needed for larger problems, but small models work with the [size-limited license](https://support.gurobi.com/hc/en-us/articles/360051597492-How-do-I-resolve-a-Model-too-large-for-size-limited-Gurobi-license-error) bundled with `gurobipy`):
+For MLE via PuLP (HiGHS is bundled; CPLEX, COPT, and Gurobi are also supported as solver backends):
+
+```bash
+pip install bloqade-decoders[milp]
+```
+
+For the deprecated Gurobi-based MLE decoder (a full [Gurobi license](https://www.gurobi.com/academia/academic-program-and-licenses/) is needed for larger problems, but small models work with the [size-limited license](https://support.gurobi.com/hc/en-us/articles/360051597492-How-do-I-resolve-a-Model-too-large-for-size-limited-Gurobi-license-error) bundled with `gurobipy`):
 
 ```bash
 pip install bloqade-decoders[mle]
@@ -56,7 +63,7 @@ pip install bloqade-decoders[mld]
 You can combine multiple extras:
 
 ```bash
-pip install bloqade-decoders[mwpf, tesseract, mle, mld, sinter]
+pip install bloqade-decoders[mwpf, tesseract, milp, mle, mld, sinter]
 ```
 
 ## Usage
@@ -93,14 +100,29 @@ decoded_observable = decoder.decode(syndromes)
 
 ### MLE / MLD Decoders
 
-The `GurobiDecoder` takes a DEM directly (note: must use `decompose_errors=False`):
+The `MILPDecoder` takes a DEM directly (note: must use `decompose_errors=False`):
 
 ```python
-from bloqade.decoders import GurobiDecoder
+from bloqade.decoders import MILPDecoder
 
-decoder = GurobiDecoder(dem)
+decoder = MILPDecoder(dem)  # HiGHS backend by default
+# or pick another PuLP solver backend
+decoder = MILPDecoder(dem, solver="COPT", RelGap=0.0, AbsGap=0.0)
+
 corrections = decoder.decode(syndromes)
 ```
+
+To see different solver options, as per the [`PuLP` documentation](https://coin-or.github.io/pulp/guides/how_to_configure_solvers.html), you can run
+
+```python
+import pulp as pl
+solver_list = pl.listSolvers()
+print(solver_list)
+# ['GLPK_CMD', 'PYGLPK', 'CPLEX_CMD', 'CPLEX_PY', 'CPLEX_DLL', 'GUROBI', 'GUROBI_CMD', 'MOSEK', 'XPRESS', 'COIN_CMD', 'COINMP_DLL', 'CHOCO_CMD', 'MIPCL_CMD', 'SCIP_CMD', 'CPSAT', ...]
+```
+
+
+The `GurobiDecoder` is deprecated; use `MILPDecoder(dem, solver="GUROBI")` instead.
 
 The `TableDecoder` takes a DEM directly and trains by sampling from that DEM:
 
@@ -113,3 +135,6 @@ decoder = TableDecoder(dem, num_shots=100_000)
 
 corrections = decoder.decode(syndromes)
 ```
+
+## Quick Start
+For a short demonstration of using the `TableDecoder` and `GurobiDecoder`, you can refer to [this script](demo/decoders_api_demo.py).

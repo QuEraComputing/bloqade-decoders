@@ -57,7 +57,7 @@ class TesseractDecoder(BaseDecoder):
         no_revisit_dets: bool = False,
         verbose: bool = False,
         pqlimit: int = 200_000,
-        det_orders: list[list[int]] = [],
+        det_orders: list[list[int]] | None = None,
         det_penalty: float = 0.0,
         **_kwargs: Any,
     ):
@@ -68,6 +68,9 @@ class TesseractDecoder(BaseDecoder):
                 "The tesseract-decoder package is required for TesseractDecoder. "
                 'You can install it via: pip install "tesseract-decoder"'
             ) from e
+
+        if det_orders is None:
+            det_orders = []
 
         if det_beam is None:
             det_beam = tesseract.INF_DET_BEAM

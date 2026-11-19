@@ -4,20 +4,20 @@ from typing import Any, TypeVar
 import stim
 import numpy as np
 import numpy.typing as npt
+from typing_extensions import Self
 
 DecoderT = TypeVar("DecoderT", bound="BaseDecoder")
 
 
 class BaseDecoder(ABC):
     def __init__(self, dem: stim.DetectorErrorModel, **kwargs: Any) -> None:
+        """Every defined decoder takes in a detector error model and optional keyword arguments at construction."""
         self.dem = dem
         self._instantiate(**kwargs)
         self.train(**kwargs)
 
     @classmethod
-    def instantiate(
-        cls: type[DecoderT], dem: stim.DetectorErrorModel, **kwargs: Any
-    ) -> DecoderT:
+    def instantiate(cls, dem: stim.DetectorErrorModel, **kwargs: Any) -> Self:
         """Configure an untrained decoder from constructor keyword arguments."""
         decoder = cls.__new__(cls)
         decoder.dem = dem
@@ -26,7 +26,6 @@ class BaseDecoder(ABC):
 
     def _instantiate(self, **kwargs: Any) -> None:
         """Configure the decoder from constructor keyword arguments."""
-        pass
 
     @property
     def num_detectors(self) -> int:
@@ -41,12 +40,10 @@ class BaseDecoder(ABC):
 
         The default is a no-op for decoders that do not need training.
         """
-        pass
 
     @abstractmethod
     def _decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a single shot of detector bits."""
-        pass
 
     def decode(self, detector_bits: npt.NDArray[np.bool_]) -> npt.NDArray[np.bool_]:
         """Decode a batch or single shot of detector bits.
@@ -76,6 +73,10 @@ class BaseDecoder(ABC):
         self, detector_bits: npt.NDArray[np.bool_]
     ) -> tuple[npt.NDArray[np.bool_], float | npt.NDArray[np.float64]]:
         """Decode a batch or single shot of detector bits with confidence scores.
+
+        Confidence scores are decoder-specific. They are not necessarily
+        probabilities or bounded to a common range, so confidence thresholds
+        should not be shared across decoder types without calibration.
 
         Confidence is ``0.0`` when a decoder did not converge. This default
         implementation always reports ``1.0`` because it has no convergence
