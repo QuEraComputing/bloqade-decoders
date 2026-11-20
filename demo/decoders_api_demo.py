@@ -147,3 +147,7 @@ mle_correction_confidence_batch = mle_decoder.decode_confidence(
 print(mle_correction_confidence_batch)
 
 # %%
+
+# %% [markdown]
+# For a runnable example that trains on a circuit prior and scores held-out
+# trajectories from a physical noise model, see [the HOPS-QEC example](hops_qec/README.md).
